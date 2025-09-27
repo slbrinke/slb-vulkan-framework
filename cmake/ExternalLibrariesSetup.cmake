@@ -1,5 +1,5 @@
 #vulkan
-set(ENV{VULKAN_SDK} "C:/VulkanSDK/1.3.250.1")
+#set(ENV{VULKAN_SDK} "C:/VulkanSDK/1.3.250.1")
 find_package(Vulkan REQUIRED)
 
 #glfw

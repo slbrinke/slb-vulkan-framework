@@ -3,6 +3,7 @@
 
 #include <memory>
 #include <vector>
+#include <array>
 #include <set>
 #include <string>
 #include <stdexcept>
@@ -56,10 +57,14 @@ const std::vector<const char*> deviceExtensions = {
         VK_EXT_HOST_QUERY_RESET_EXTENSION_NAME
 };
 
-VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger);
-
-void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator);
-
+/**
+ * Pass on debug output from the vulkan debug messenger.
+ * 
+ * @param messgeSeverity characterizes how important the message is
+ * @param messageType distinguished between general, validation, and performance messages
+ * @param pCallbackData main message info
+ * @param pUserData custom debug info
+ */
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType, const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData);
 
 /**
@@ -81,11 +86,132 @@ public:
     Context(int width, int height, const char* title, bool enableValidationLayers = true);
     ~Context();
 
+    /**
+     * Return a reference to the unique pointer storing the glfw window.
+     */
     std::unique_ptr<GLFWwindow, DestroyGLFWwindow> &getWindow();
+
+    /**
+     * Return the vulkan handle of the surface used as an interface between swap chain and glfw window.
+     */
+    VkSurfaceKHR getSurface();
+
+    /**
+     * Return the vulkan handle of the logical device managing vulkan use for the entire application.
+     */
     VkDevice getDevice();
 
     /**
+     * Return the vulkan handle of the command pool that all commands are allocated from.
+     */
+    VkCommandPool getCommandPool();
+
+    /**
+     * Return the vulkan handle of the queue used for compute commands.
+     */
+    VkQueue getComputeQueue();
+
+    /**
+     * Return the vulkan handle of the queue used for graphics commands.
+     */
+    VkQueue getGraphicsQueue();
+
+    /**
+     * Return the vulkan handle of the present queue.
+     */
+    VkQueue getPresentQueue();
+
+    /**
+     * Return the indices of the queue families used by the selected physical device.
+     * 
+     * The first index refers to the queue family suitable for compute and graphics commands.
+     * The second index referes to the family of the present queue.
+     * Both indices refer to the order listed by vkGetPhysicalDeviceQueueFamilyProperties.
+     */
+    std::array<uint32_t,2> getQueueFamilyIndices();
+
+    /**
+     * Return the properties of the selected physical device relevan for swap chain creation.
+     */
+    SwapChainSupport getSwapChainSupport();
+
+    /**
+     * Return the maximum framebuffer sample count (e.g. for MSAA).
+     */
+    VkSampleCountFlagBits getMaxSamples();
+
+    /**
+     * Look up the address of a vulkan extension function.
+     * 
+     * Necessary to call extension functions, which are not automatically loaded.
+     * 
+     * @param funcionName name of the extension function
+     */
+    PFN_vkVoidFunction getExtensionFunction(const char *functionName);
+
+    /**
+     * Choose a memory type matching the properties of the selected physical device
+     * 
+     * Typical VkMemoryPropertyFlags include VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, etc.
+     * 
+     * @param typeFilter selection of memory types to choose from (encoded as a bit mask)
+     * @param properties requirements the memory type has to meet
+     * @return suitable memory type 
+     */
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
+
+    /**
+     * Choose an image format matching the memory properties of the selected physical device.
+     * 
+     * @param candidates selection of image formats to choose from
+     * @param tiling arrangement of texel blocks the format has to match
+     * @param features bitmaks of features the format capabilities have to match
+     * @return suitable image format
+     */
+    VkFormat findSupportedFormat(const std::vector<VkFormat> &candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+
+    /**
+     * Create a temporary command buffer for one-off GPU operations.
+     * 
+     * Used to copy a buffer, transition the layout of an image, etc.
+     * 
+     * @return vulkan handle of the new command buffer
+     */
+    VkCommandBuffer startSingleCommand();
+
+    /**
+     * Finalize a one-off operation initiated by startSingleCommand.
+     * 
+     * Submits the commands to the graphics queue and destroys the command buffer.
+     * 
+     * @param commandBuffer vulkan handle of the command buffer
+     */
+    void endSingleCommand(VkCommandBuffer commandBuffer);
+
+    /**
+     * Create a vulkan buffer and allocate and bind buffer memory.
+     * 
+     * @param size memory size allocated for the buffer
+     * @param usage vulkan flags indicating the purpose of the buffer
+     * @param properties properties the allocated memory has to fulfil
+     * @param[out] buffer reference to the variable the buffer handle will be stored in
+     * @param[out] bufferMemory reference to the variable the buffer memory be stored in
+     */
+    void createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties, VkBuffer &buffer, VkDeviceMemory &bufferMemory);
+
+    /**
+     * Copy the contents of one buffer into another one.
+     * 
+     * @param srcBuffer source buffer to copy from
+     * @param dstBuffer destination buffer to copy to
+     * @param size buffer size
+     */
+    void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size);
+
+    /**
      * Destroy all vulkan components.
+     * 
+     * Command pool, logical device, surface, debug messenger and instance are destroyed in reverse order of creation.
      */
     void cleanUp();
 
@@ -180,7 +306,7 @@ private:
     VkCommandPool m_commandPool = VK_NULL_HANDLE; /**< Pool to allocate vulkan commands from. */
 
     float m_maxSamplerAnisotropy = 0.0f; /**< Maximum number of samples used when sampling a texture */
-    VkSampleCountFlagBits m_maxSamples = VK_SAMPLE_COUNT_1_BIT; /**< Maximum number of samples used for MSAA */
+    VkSampleCountFlagBits m_maxSamples = VK_SAMPLE_COUNT_1_BIT; /**< Maximum number of framebuffer samples (e.g. for MSAA) */
     float m_timeStampPeriod = 0.0f; /**< Number of nanoseconds required for a timestamp to be incremented by 1 */
 };
 

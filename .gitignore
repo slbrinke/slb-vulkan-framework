@@ -1,2 +1,3 @@
 .vscode/
 build/
+src/library/path_config.h

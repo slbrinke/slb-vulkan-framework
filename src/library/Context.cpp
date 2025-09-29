@@ -16,8 +16,141 @@ std::unique_ptr<GLFWwindow, DestroyGLFWwindow> &Context::getWindow() {
     return m_window;
 }
 
+VkSurfaceKHR Context::getSurface() {
+    return m_surface;
+}
+
 VkDevice Context::getDevice() {
     return m_logicalDevice;
+}
+
+VkCommandPool Context::getCommandPool() {
+    return m_commandPool;
+}
+
+VkQueue Context::getComputeQueue() {
+    return m_computeQueue;
+}
+
+VkQueue Context::getGraphicsQueue() {
+    return m_graphicsQueue;
+}
+
+VkQueue Context::getPresentQueue() {
+    return m_presentQueue;
+}
+
+std::array<uint32_t,2> Context::getQueueFamilyIndices() {
+    return {m_queueFamilyIndices.computeAndGraphicsIndex, m_queueFamilyIndices.presentIndex};
+}
+
+SwapChainSupport Context::getSwapChainSupport() {
+    return querySwapChainSupport(m_physicalDevice);
+}
+
+VkSampleCountFlagBits Context::getMaxSamples() {
+    return m_maxSamples;
+}
+
+PFN_vkVoidFunction Context::getExtensionFunction(const char *functionName) {
+    return vkGetInstanceProcAddr(m_instance, functionName);
+}
+
+uint32_t Context::findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties) {
+    VkPhysicalDeviceMemoryProperties memoryProperties;
+    vkGetPhysicalDeviceMemoryProperties(m_physicalDevice, &memoryProperties);
+    for(uint32_t i=0; i<memoryProperties.memoryTypeCount; i++) {
+        if(typeFilter & (1 << i) &&
+           (memoryProperties.memoryTypes[i].propertyFlags & properties) == properties) {
+            return i;
+        }
+    }
+    throw std::runtime_error("CONTEXT ERROR: Could not find a suitable memory type");
+}
+
+VkFormat Context::findSupportedFormat(const std::vector<VkFormat> &candidates, VkImageTiling tiling,
+                                      VkFormatFeatureFlags features) {
+    for(VkFormat format : candidates) {
+        VkFormatProperties properties;
+        vkGetPhysicalDeviceFormatProperties(m_physicalDevice, format, &properties);
+        if(tiling == VK_IMAGE_TILING_LINEAR && (properties.linearTilingFeatures & features) == features) {
+            return format;
+        } else if(tiling == VK_IMAGE_TILING_OPTIMAL && (properties.optimalTilingFeatures & features) == features) {
+            return format;
+        }
+    }
+    throw std::runtime_error("CONTEXT ERROR: Could not find supported format.");
+}
+
+VkCommandBuffer Context::startSingleCommand() {
+    VkCommandBufferAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    allocInfo.commandPool = m_commandPool;
+    allocInfo.commandBufferCount = 1;
+
+    VkCommandBuffer commandBuffer;
+    vkAllocateCommandBuffers(m_logicalDevice, &allocInfo, &commandBuffer);
+
+    VkCommandBufferBeginInfo beginInfo{};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
+    return commandBuffer;
+}
+
+void Context::endSingleCommand(VkCommandBuffer commandBuffer) {
+    vkEndCommandBuffer(commandBuffer);
+
+    VkSubmitInfo submitInfo{};
+    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    submitInfo.commandBufferCount = 1;
+    submitInfo.pCommandBuffers = &commandBuffer;
+
+    vkQueueSubmit(m_graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
+    vkQueueWaitIdle(m_graphicsQueue);
+
+    vkFreeCommandBuffers(m_logicalDevice, m_commandPool, 1, &commandBuffer);
+}
+
+void Context::createBuffer(VkDeviceSize size, VkBufferUsageFlags usage, VkMemoryPropertyFlags properties,
+                           VkBuffer &buffer, VkDeviceMemory &bufferMemory) {
+    VkBufferCreateInfo bufferInfo{};
+    bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    bufferInfo.size = size;
+    bufferInfo.usage = usage;
+    bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+    if(vkCreateBuffer(m_logicalDevice, &bufferInfo, nullptr, &buffer) != VK_SUCCESS) {
+        throw std::runtime_error("CONTEXT ERROR: Could not create buffer.");
+    }
+
+    VkMemoryRequirements memoryRequirements;
+    vkGetBufferMemoryRequirements(m_logicalDevice, buffer, &memoryRequirements);
+
+    VkMemoryAllocateInfo allocInfo{};
+    allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocInfo.allocationSize = memoryRequirements.size;
+    allocInfo.memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, properties);
+
+    if(vkAllocateMemory(m_logicalDevice, &allocInfo, nullptr, &bufferMemory) != VK_SUCCESS) {
+        throw std::runtime_error("CONTEXT ERROR: Could not allocate buffer memory.");
+    }
+
+    vkBindBufferMemory(m_logicalDevice, buffer, bufferMemory, 0);
+}
+
+void Context::copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size) {
+    VkCommandBuffer commandBuffer = startSingleCommand();
+
+    VkBufferCopy copyRegion{};
+    copyRegion.srcOffset = 0;
+    copyRegion.dstOffset = 0;
+    copyRegion.size = size;
+    vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &copyRegion);
+
+    endSingleCommand(commandBuffer);
 }
 
 void Context::createWindow(int width, int height, const char* title) {
@@ -131,7 +264,8 @@ void Context::createInstance(const char* title, bool enableValidationLayers) {
 
     //create debug messenger
     if(enableValidationLayers) {
-        if(CreateDebugUtilsMessengerEXT(m_instance, &debugInfo, nullptr, &m_debugMessenger) != VK_SUCCESS) {
+        auto func = (PFN_vkCreateDebugUtilsMessengerEXT)getExtensionFunction("vkCreateDebugUtilsMessengerEXT");
+        if(func == nullptr || func(m_instance, &debugInfo, nullptr, &m_debugMessenger) != VK_SUCCESS) {
             throw std::runtime_error("CONTEXT ERROR: Could not set up debug messenger.");
         }
     }    
@@ -271,9 +405,9 @@ void Context::pickPhysicalDevice() {
 }
 
 void Context::createLogicalDevice(bool enableValidationLayers) {
-    std::set<uint32_t> queueFamilyIndices = {m_queueFamilyIndices.computeAndGraphicsIndex, m_queueFamilyIndices.presentIndex};
     std::vector<VkDeviceQueueCreateInfo> queueInfos;
-    for(uint32_t queueFamilyIndex : queueFamilyIndices) {
+    std::set<uint32_t> queueFamilySet = {m_queueFamilyIndices.computeAndGraphicsIndex, m_queueFamilyIndices.presentIndex};
+    for(uint32_t queueFamilyIndex : queueFamilySet) {
         VkDeviceQueueCreateInfo queueInfo{};
         queueInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queueInfo.queueFamilyIndex = queueFamilyIndex;
@@ -347,7 +481,10 @@ void Context::cleanUp() {
         vkDestroySurfaceKHR(m_instance, m_surface, nullptr);
     }
     if(m_debugMessenger != VK_NULL_HANDLE) {
-        DestroyDebugUtilsMessengerEXT(m_instance, m_debugMessenger, nullptr);
+        auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)getExtensionFunction("vkDestroyDebugUtilsMessengerEXT");
+        if(func != nullptr) {
+            func(m_instance, m_debugMessenger, nullptr);
+        }
     }
     vkDestroyInstance(m_instance, nullptr);
 }

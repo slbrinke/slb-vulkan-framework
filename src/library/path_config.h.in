@@ -1,0 +1,14 @@
+#ifndef SLBVULKAN_PATHCONFIG_H
+#define SLBVULKAN_PATHCONFIG_H
+
+/**
+ * Path of the resources folder retrieved from cmake setup.
+ */
+#define RESOURCE_DIR "@RESOURCE_DIR@"
+
+/**
+ * Path of the glsl to spir-v compiler retrieved from cmake setup.
+ */
+#define SHADER_COMPILER "@SHADER_COMPILER@"
+
+#endif //SLBVULKAN_PATHCONFIG_H

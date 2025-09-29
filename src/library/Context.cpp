@@ -48,6 +48,10 @@ SwapChainSupport Context::getSwapChainSupport() {
     return querySwapChainSupport(m_physicalDevice);
 }
 
+float Context::getMaxSamplerAnisotropy() {
+    return m_maxSamplerAnisotropy;
+}
+
 VkSampleCountFlagBits Context::getMaxSamples() {
     return m_maxSamples;
 }

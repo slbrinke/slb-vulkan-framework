@@ -136,6 +136,11 @@ public:
     SwapChainSupport getSwapChainSupport();
 
     /**
+     * Return the maximum number of samples used when sampling a texture.
+     */
+    float getMaxSamplerAnisotropy();
+
+    /**
      * Return the maximum framebuffer sample count (e.g. for MSAA).
      */
     VkSampleCountFlagBits getMaxSamples();

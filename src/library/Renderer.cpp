@@ -1,9 +1,12 @@
 #include "Renderer.h"
 
-Renderer::Renderer(std::shared_ptr<Context> &context) : m_context(context) {
+Renderer::Renderer(std::shared_ptr<Context> &context, std::shared_ptr<Camera> &camera, std::shared_ptr<Scene> &scene)
+: m_context(context), m_camera(camera), m_scene(scene) {
     createSwapChain();
 
     m_depthFormat = m_context->findSupportedFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT}, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+    m_scene->init(m_context);
 }
 
 Renderer::~Renderer() {
@@ -92,6 +95,15 @@ void Renderer::setUpRenderOutput() {
     //implemented in subclasses
 }
 
+void Renderer::setUpDescriptorSets() {
+    m_descriptorSets.emplace_back(m_context, m_numSwapChainImages);
+    m_descriptorSets.back().addBuffer("Camera", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, sizeof(CameraUniforms), false);
+
+    for(auto &descriptorSet : m_descriptorSets) {
+        descriptorSet.init();
+    }
+}
+
 void Renderer::setUpRenderSteps() {
     //implemented in subclasses
 }
@@ -145,7 +157,14 @@ void Renderer::createSyncObjects() {
 }
 
 void Renderer::update() {
-    //update uniforms here
+    uint32_t frameIndex = m_currentFrame % m_numSwapChainImages;
+
+    //update uniforms
+    CameraUniforms camUniforms{
+        m_camera->getViewMatrix(),
+        m_camera->getProjectionMatrix()
+    };
+    m_descriptorSets[0].updateBuffer("Camera", frameIndex, &camUniforms);
 
     compute();
 }
@@ -292,7 +311,7 @@ void Renderer::recordGraphicsCommandBuffer() {
 
     m_renderOutput[0].start(commandBuffer, frameIndex);
     m_renderSteps[0].start(commandBuffer, frameIndex);
-    m_testMesh.render(commandBuffer, 1);
+    m_scene->renderMeshes(commandBuffer);
     m_renderSteps[0].end(commandBuffer);
     m_renderOutput[1].end(commandBuffer);
 }
@@ -305,6 +324,9 @@ void Renderer::cleanUp() {
         vkDestroyFence(m_context->getDevice(), m_computeInFlightFences[i], nullptr);
         vkDestroyFence(m_context->getDevice(), m_graphicsInFlightFences[i], nullptr);
     }
+    for(auto &descriptorSet : m_descriptorSets) {
+        descriptorSet.cleanUp();
+    }
     for(auto &step : m_renderSteps) {
         step.cleanUp();
     }
@@ -316,13 +338,13 @@ void Renderer::cleanUp() {
     }
 }
 
-SimpleRenderer::SimpleRenderer(std::shared_ptr<Context> &context) : Renderer(context) {
+SimpleRenderer::SimpleRenderer(std::shared_ptr<Context> &context, std::shared_ptr<Camera> &camera, std::shared_ptr<Scene> &scene)
+: Renderer(context, camera, scene) {
     setUpRenderOutput();
+    setUpDescriptorSets();
     setUpRenderSteps();
     createCommandBuffers();
     createSyncObjects();
-
-    m_testMesh.createBuffers(m_context);
 }
 
 void SimpleRenderer::setUpRenderOutput() {
@@ -337,6 +359,6 @@ void SimpleRenderer::setUpRenderOutput() {
 void SimpleRenderer::setUpRenderSteps() {
     m_renderSteps.emplace_back(m_context, m_numSwapChainImages);
     m_renderSteps.back().setName("Simple Rendering");
-    m_renderSteps.back().createShaderModules({"simple.vert", "simple.frag"});
+    m_renderSteps.back().createShaderModules({"simple.vert", "simple.frag"}, m_descriptorSets);
     m_renderSteps.back().initRenderStep(m_renderOutput[0], 0);
 }

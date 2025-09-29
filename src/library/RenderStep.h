@@ -3,6 +3,7 @@
 
 #include "Context.h"
 #include "ResourceLoader.h"
+#include "DescriptorSet.h"
 #include "RenderOutput.h"
 #include "Mesh.h"
 
@@ -37,10 +38,12 @@ public:
      * 
      * The file names should end in ".vert", ".geom", ".frag", or ".comp" to denote different shader stages.
      * Shader contents are compiled into spir-v format and then loaded.
+     * Required descriptor sets denoted with "#include ..." in the shader files are collected and added to m_descriptorSets.
      * 
      * @param shaderFiles names of shader files in the resources/shaders/file
+     * @param descriptorSets list of all shader resource sets that the required subset is extracted from
      */
-    void createShaderModules(const std::vector<std::string> &shaderFiles);
+    void createShaderModules(const std::vector<std::string> &shaderFiles, std::vector<DescriptorSet> &descriptorSets);
 
     /**
      * Set up vulkan pipeline with the specified shaders and render settings.
@@ -95,6 +98,10 @@ private:
 
     std::vector<VkShaderModule> m_shaderModules; /**< Vulkan handles of the shader modules */
     std::vector<VkShaderStageFlagBits> m_shaderStages; /**< Vulkan shader stage flags for each shader module */
+
+    std::vector<uint32_t> m_requiredDescriptorSets; /**< Absolute indices of the required descriptor sets */
+    std::vector<VkDescriptorSetLayout> m_descriptorSetLayouts; /**< Layouts of the required descriptor sets */
+    std::vector<std::vector<VkDescriptorSet>> m_descriptorSets; /**< Required descriptor sets for each frame in flight */
 
     VkPrimitiveTopology m_primitiveTopology = VK_PRIMITIVE_TOPOLOGY_TRIANGLE_LIST; /**< Topology dictating how primitives are assembled for the rendered geometry */
     VkCullModeFlags m_cullMode = VK_CULL_MODE_NONE; /**< Culling settings */

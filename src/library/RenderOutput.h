@@ -46,7 +46,9 @@ public:
     /**
      * Set up render output with an empty subpass.
      * 
-     * @param context reference to the vulkan context
+     * A new smart pointer to the vulkan context is stored for later use.
+     * 
+     * @param context pointer to the vulkan context
      * @param numFramesInFlight number of images alternated in the swap chain
      * @param imageExtent size of all output images in number of pixels
      * @param numLayers number of layers of all output images
@@ -206,7 +208,7 @@ private:
      */
     void createFramebuffers();
 
-    std::shared_ptr<Context> m_context; /**< Reference to the vulkan context */
+    std::shared_ptr<Context> m_context; /**< Pointer to the vulkan context */
 
     uint32_t m_numFramesInFlight; /**< Number of images necessary for swap chain attachment */
     VkExtent2D m_imageExtent; /**< Size of the output images in number of pixels */

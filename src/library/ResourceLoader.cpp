@@ -17,7 +17,32 @@ std::vector<char> ResourceLoader::loadFile(const std::string &fileName) {
     return buffer;
 }
 
-std::string ResourceLoader::compileShader(const std::string &fileName) {
+void ResourceLoader::findRequiredDescriptorSets(const std::string &fileName, std::vector<uint32_t> &requiredDescriptorSets) {
+    std::ifstream file("../resources/shaders/" + fileName, std::ios::ate | std::ios::binary);
+    if(!file.is_open()) {
+        throw std::runtime_error("Could not read file: " + fileName);
+    }
+
+    file.seekg(0);
+    std::string line;
+    while(std::getline(file, line)) {
+        if(line.substr(0, 8) == "#include") {
+            auto descriptorName = line.substr(9, line.length() - 9);
+            auto setIndex = getDescriptorSetIndex(descriptorName);
+            requiredDescriptorSets.emplace_back(setIndex);
+        }
+    }
+}
+
+uint32_t ResourceLoader::getDescriptorSetIndex(std::string descriptorName) {
+    if(descriptorName == "Camera") {
+        return 0;
+    }
+    
+    throw std::runtime_error("RESOURCE LOADER ERROR: There is no descriptor with the name " + descriptorName);
+}
+
+std::string ResourceLoader::compileShader(const std::string &fileName, std::vector<uint32_t> &requiredDescriptorSets) {
     auto slashPos = fileName.find_last_of('/');
     auto periodPos = fileName.find_last_of('.');
 
@@ -38,22 +63,19 @@ std::string ResourceLoader::compileShader(const std::string &fileName) {
         if(!line.empty() && line[line.size() - 1] == '\r') {
             line.erase(line.size() - 1);
         }
-        /*
         if(line.substr(0, 8) == "#include") {
-            auto resourceName = line.substr(9, line.length() - 9);
-            auto resourceIndex = getResourceIndex(resourceName);
-            
+            auto descriptorName = line.substr(9, line.length() - 9);
+            auto absoluteIndex = getDescriptorSetIndex(descriptorName);
+
             uint32_t setIndex = 0;
-            while(setIndex < requiredDescriptorSets.size() && requiredDescriptorSets[setIndex] < resourceIndex) {
+            while(setIndex < requiredDescriptorSets.size() && requiredDescriptorSets[setIndex] < absoluteIndex) {
                 setIndex++;
             }
-            outputFile << getResourceDefinition(resourceName, setIndex);
-
+            outputFile << getDescriptorText(descriptorName, setIndex);
+            
         } else {
             outputFile << line << "\n";
         }
-            */
-        outputFile << line << "\n";
     }
     inputFile.close();
     outputFile.close();
@@ -71,4 +93,14 @@ std::string ResourceLoader::compileShader(const std::string &fileName) {
     system(command.c_str());
 
     return compiledName;
+}
+
+std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32_t setIndex) {
+    if(descriptorName == "Camera") {
+        return "layout(set = " + std::to_string(setIndex) + ", binding = 0) uniform CameraUniforms {\n"
+        + "   mat4 view;\n"
+        + "   mat4 projection;\n"
+        + "}camera;\n\n";
+    }
+    return "//test";
 }

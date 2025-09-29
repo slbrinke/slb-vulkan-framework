@@ -6,6 +6,8 @@
 #include <glm/glm.hpp>
 
 #include "Context.h"
+#include "Camera.h"
+#include "Scene.h"
 #include "RenderOutput.h"
 #include "RenderStep.h"
 
@@ -24,8 +26,10 @@ public:
      * Includes the creation of a swap chain that can be used in the output defined by the subclasses.
      * 
      * @param context pointer to the vulkan context
+     * @param camera pointer to the camera the scene will be seen through
+     * @param scene pointer to the scene that will be visualized
      */
-    Renderer(std::shared_ptr<Context> &context);
+    Renderer(std::shared_ptr<Context> &context, std::shared_ptr<Camera> &camera, std::shared_ptr<Scene> &scene);
     ~Renderer();
 
     /**
@@ -56,6 +60,11 @@ protected:
     virtual void setUpRenderOutput();
 
     /**
+     * Set up descriptor sets to provide data required in the shaders.
+     */
+    void setUpDescriptorSets();
+
+    /**
      * Set up individual render steps.
      * 
      * Has to be implemented in the subclasses.
@@ -74,6 +83,8 @@ protected:
     void createSyncObjects();
 
     std::shared_ptr<Context> m_context; /**< Pointer to the vulkan context */
+    std::shared_ptr<Camera> m_camera; /**< Pointer to the camera viewing the scene */
+    std::shared_ptr<Scene> m_scene; /**< Pointer to the rendered scene */
 
     VkExtent2D m_imageExtent{0, 0}; /**< Size of the screen in number of pixels */
     VkViewport m_viewport{0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f}; /**< Viewport definition to render to a section of the screen */
@@ -84,10 +95,9 @@ protected:
     VkFormat m_swapChainFormat = VK_FORMAT_R8G8B8A8_SRGB; /**< Color format used for swap chain images */
     VkFormat m_depthFormat; /**< Format suitable for depth buffers */
 
+    std::vector<DescriptorSet> m_descriptorSets; /**< List of descriptor sets added to render steps as requested in the shaders */
     std::vector<RenderOutput> m_renderOutput; /**< List of output image sets to render to */
     std::vector<RenderStep> m_renderSteps; /**< Individual rendering steps iterated for every frame */
-
-    Mesh m_testMesh;
 
 private:
     /**
@@ -141,7 +151,7 @@ private:
  */
 class SimpleRenderer : public Renderer {
 public:
-    SimpleRenderer(std::shared_ptr<Context> &context);
+    SimpleRenderer(std::shared_ptr<Context> &context, std::shared_ptr<Camera> &camera, std::shared_ptr<Scene> &scene);
     ~SimpleRenderer() = default;
 
 private:

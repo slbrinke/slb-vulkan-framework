@@ -13,10 +13,14 @@ void RenderStep::setName(std::string name) {
     m_name = name;
 }
 
-void RenderStep::createShaderModules(const std::vector<std::string> &shaderFiles) {
+void RenderStep::createShaderModules(const std::vector<std::string> &shaderFiles, std::vector<DescriptorSet> &descriptorSets) {
+    for(size_t shader=0; shader<shaderFiles.size(); shader++) {
+        ResourceLoader::findRequiredDescriptorSets(shaderFiles[shader], m_requiredDescriptorSets);
+    }
+
     m_shaderModules.resize(shaderFiles.size());
     for(size_t shader=0; shader<shaderFiles.size(); shader++) {
-        auto compiledName = ResourceLoader::compileShader(shaderFiles[shader]);
+        auto compiledName = ResourceLoader::compileShader(shaderFiles[shader], m_requiredDescriptorSets);
         auto code = ResourceLoader::loadFile(compiledName);
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -26,6 +30,16 @@ void RenderStep::createShaderModules(const std::vector<std::string> &shaderFiles
             throw std::runtime_error("PIPELINE ERROR: Could not create shader module: " + shaderFiles[shader]);
         }
         m_shaderStages.emplace_back(getShaderStage(shaderFiles[shader]));
+    }
+
+    m_descriptorSets.resize(m_numFramesInFlight);
+    for(auto descriptorSetIndex : m_requiredDescriptorSets) {
+        if(descriptorSetIndex < descriptorSets.size()) {
+            m_descriptorSetLayouts.emplace_back(descriptorSets[descriptorSetIndex].getLayout());
+            for(uint32_t frame=0; frame<m_numFramesInFlight; frame++) {
+                m_descriptorSets[frame].emplace_back(descriptorSets[descriptorSetIndex].getSet(frame));
+            }
+        }
     }
 }
 
@@ -203,9 +217,9 @@ void RenderStep::initRenderStep(RenderOutput &output, uint32_t subPassIndex) {
             m_descriptorSets[frame].emplace_back(renderPass.getInputDescriptorSet(m_subPassIndex).getSet(frame));
         }
     }
+        */
     pipelineLayoutInfo.setLayoutCount = m_descriptorSetLayouts.size();
     pipelineLayoutInfo.pSetLayouts = m_descriptorSetLayouts.data();
-    */
 
     //push constants
     /*
@@ -242,7 +256,7 @@ void RenderStep::start(VkCommandBuffer commandBuffer, uint32_t frameIndex) {
     }
 
     vkCmdBindPipeline(commandBuffer, m_bindPoint, m_pipeline);
-    //vkCmdBindDescriptorSets(commandBuffer, m_bindPoint, m_pipelineLayout, 0, m_descriptorSets[frameIndex].size(), m_descriptorSets[frameIndex].data(), 0, nullptr);
+    vkCmdBindDescriptorSets(commandBuffer, m_bindPoint, m_pipelineLayout, 0, m_descriptorSets[frameIndex].size(), m_descriptorSets[frameIndex].data(), 0, nullptr);
 }
 
 void RenderStep::end(VkCommandBuffer commandBuffer) {

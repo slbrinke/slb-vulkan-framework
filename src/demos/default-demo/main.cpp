@@ -4,6 +4,8 @@
 #include "Camera.h"
 #include "Renderer.h"
 
+#include "ResourceLoader.h"
+
 void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
     if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
@@ -22,8 +24,14 @@ int main() {
     glfwSetKeyCallback(context->getWindow().get(), keyCallback);
 
     camera = std::make_shared<Camera>(screenWidth, screenHeight, context->getWindow());
+    camera->setPosition(glm::vec3(0.0f, 0.3f, 0.0f));
 
     scene = std::make_shared<Scene>();
+
+    auto testNode = std::make_unique<SceneNode>();
+    ResourceLoader::loadModel("bottle", testNode);
+    testNode->scale(0.1f);
+    scene->addSceneNode(testNode);
 
     SimpleRenderer renderer(context, camera, scene);
 

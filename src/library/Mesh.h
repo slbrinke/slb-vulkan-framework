@@ -1,7 +1,7 @@
 #ifndef SLBVULKAN_MESH_H
 #define SLBVULKAN_MESH_H
 
-#include <glm/glm.hpp>
+#include <glm/ext.hpp>
 
 #include "Context.h"
 
@@ -84,6 +84,25 @@ public:
      * @param index index of a vertex in the vertex buffer
      */
     void addIndex(uint16_t index);
+
+    /**
+     * Add a sphere to the geometry.
+     * 
+     * @param center position of the sphere center
+     * @param radius radius of the sphere in local coordinates
+     * @param resolution number of segments the sphere is divided in horizontally
+     */
+    void addSphere(glm::vec3 center, float radius, int resolution);
+
+    /**
+     * Add a cone to the geometry.
+     * 
+     * @param base position of the cone base
+     * @param radius radius of the cone base
+     * @param height distance from base to tip
+     * @param int resolution number of segments the cone is divided in horizontally
+     */
+    void addCone(glm::vec3 base, float radius, float height, int resolution);
 
     /**
      * Create vulkan representation of the mesh.

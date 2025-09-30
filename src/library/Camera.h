@@ -25,6 +25,11 @@ struct CameraKeyFrame {
     glm::vec3 direction; /**< Direction the camera is pointed in at the specified time */
 };
 
+/**
+ * GPU representation of the relevant camera parameters.
+ * 
+ * Used to pass view and projection matrix to shaders.
+ */
 struct CameraUniforms {
     glm::mat4 viewMatrix;
     glm::mat4 projectionMatrix;

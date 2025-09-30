@@ -27,6 +27,13 @@ public:
     ~RenderStep();
 
     /**
+     * Return the pipeline layout e.g. for push constant commands.
+     * 
+     * @return vulkan handle of the pipeline layout
+     */
+    VkPipelineLayout getPipelineLayout();
+
+    /**
      * Change the name displayed as debug label.
      * 
      * @param name new name describing the render step

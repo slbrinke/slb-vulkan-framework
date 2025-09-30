@@ -6,7 +6,8 @@ layout(location = 2) in vec2 inTextureCoord;
 layout(location = 3) in vec3 inTangent;
 
 #include Camera
+#include SceneNodeConstants
 
 void main(){
-    gl_Position = camera.projection * camera.view * inPosition;
+    gl_Position = camera.projection * camera.view * model * inPosition;
 }

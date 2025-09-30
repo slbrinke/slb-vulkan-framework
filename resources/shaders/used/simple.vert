@@ -10,7 +10,12 @@ layout(set = 0, binding = 0) uniform CameraUniforms {
    mat4 projection;
 }camera;
 
+layout(push_constant, std430) uniform SceneNodeConstants {
+   mat4 model;
+   uint materialIndex;
+};
+
 
 void main(){
-    gl_Position = camera.projection * camera.view * inPosition;
+    gl_Position = camera.projection * camera.view * model * inPosition;
 }

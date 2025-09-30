@@ -9,6 +9,10 @@ RenderStep::~RenderStep() {
     m_context = nullptr;
 }
 
+VkPipelineLayout RenderStep::getPipelineLayout() {
+    return m_pipelineLayout;
+}
+
 void RenderStep::setName(std::string name) {
     m_name = name;
 }
@@ -222,14 +226,12 @@ void RenderStep::initRenderStep(RenderOutput &output, uint32_t subPassIndex) {
     pipelineLayoutInfo.pSetLayouts = m_descriptorSetLayouts.data();
 
     //push constants
-    /*
     std::vector<VkPushConstantRange> pushConstants(1);
     pushConstants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
     pushConstants[0].offset = 0;
-    pushConstants[0].size = sizeof(ObjectConstants);
+    pushConstants[0].size = sizeof(SceneNodeConstants);
     pipelineLayoutInfo.pushConstantRangeCount = pushConstants.size();
     pipelineLayoutInfo.pPushConstantRanges = pushConstants.data();
-    */
 
     if(vkCreatePipelineLayout(m_context->getDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("PIPELINE ERROR: Could not create pipeline layout");

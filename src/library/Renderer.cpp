@@ -5,8 +5,6 @@ Renderer::Renderer(std::shared_ptr<Context> &context, std::shared_ptr<Camera> &c
     createSwapChain();
 
     m_depthFormat = m_context->findSupportedFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT}, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
-
-    m_scene->init(m_context);
 }
 
 Renderer::~Renderer() {
@@ -96,8 +94,10 @@ void Renderer::setUpRenderOutput() {
 }
 
 void Renderer::setUpDescriptorSets() {
-    m_descriptorSets.emplace_back(m_context, m_numSwapChainImages);
-    m_descriptorSets.back().addBuffer("Camera", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, sizeof(CameraUniforms), false);
+    m_descriptorSets.resize(2, DescriptorSet(m_context, m_numSwapChainImages));
+    m_descriptorSets[0].addBuffer("Camera", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, sizeof(CameraUniforms), false);
+
+    m_scene->init(m_context, m_descriptorSets);
 
     for(auto &descriptorSet : m_descriptorSets) {
         descriptorSet.init();
@@ -165,6 +165,8 @@ void Renderer::update() {
         m_camera->getProjectionMatrix()
     };
     m_descriptorSets[0].updateBuffer("Camera", frameIndex, &camUniforms);
+
+    m_scene->updateUniforms(m_descriptorSets, frameIndex);
 
     compute();
 }
@@ -311,7 +313,7 @@ void Renderer::recordGraphicsCommandBuffer() {
 
     m_renderOutput[0].start(commandBuffer, frameIndex);
     m_renderSteps[0].start(commandBuffer, frameIndex);
-    m_scene->renderMeshes(commandBuffer);
+    m_scene->renderMeshes(commandBuffer, m_renderSteps[0].getPipelineLayout());
     m_renderSteps[0].end(commandBuffer);
     m_renderOutput[1].end(commandBuffer);
 }
@@ -348,8 +350,9 @@ SimpleRenderer::SimpleRenderer(std::shared_ptr<Context> &context, std::shared_pt
 }
 
 void SimpleRenderer::setUpRenderOutput() {
-    m_renderOutput.emplace_back(m_context, m_numSwapChainImages, m_imageExtent, 1, false);
-    m_renderOutput.back().addSwapChainAttachment(m_swapChain, m_swapChainFormat, glm::vec4(1.0, 0.3, 0.0, 1.0));
+    m_renderOutput.emplace_back(m_context, m_numSwapChainImages, m_imageExtent, 1, true);
+    auto bgColor = m_scene->getBackgroundColor();
+    m_renderOutput.back().addSwapChainAttachment(m_swapChain, m_swapChainFormat, glm::vec4(bgColor, 1.0f));
 
     for(auto &output : m_renderOutput) {
         output.init();

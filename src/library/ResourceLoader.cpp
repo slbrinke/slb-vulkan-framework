@@ -46,7 +46,7 @@ void ResourceLoader::findRequiredDescriptorSets(const std::string &fileName, std
 uint32_t ResourceLoader::getDescriptorSetIndex(std::string descriptorName) {
     if(descriptorName == "Camera" || descriptorName == "Renderer") {
         return 0;
-    } else if(descriptorName == "Materials" || descriptorName == "Lights" || descriptorName == "SceneNodeConstants") {
+    } else if(descriptorName == "Materials" || descriptorName == "Lights" || descriptorName == "Textures" || descriptorName == "SceneNodeConstants") {
         return 1;
     }
     
@@ -132,9 +132,9 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         + "   int diffuseTextureIndex;\n"
         + "   int normalTextureIndex;\n"
         + "   int roughnessTextureIndex;\n"
+        + "   int metallicTextureIndex;\n"
         + "   float pad1;\n"
         + "   float pad2;\n"
-        + "   float pad3;\n"
         + "};\n\n"
         + "layout(set = " + std::to_string(setIndex) + ", binding = 0) uniform MaterialUniforms {\n"
         + "   Material materials[5];\n"
@@ -151,6 +151,8 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         + "layout(set = " + std::to_string(setIndex) + ", binding = 1) uniform LightUniforms {\n"
         + "   Light lights[5];\n"
         + "};\n\n";
+    } else if(descriptorName == "Textures") {
+        return std::string("layout(set = " + std::to_string(setIndex) + ", binding = 2) uniform sampler2D materialTextures[2];");
     } else if(descriptorName == "SceneNodeConstants") {
         return std::string("layout(push_constant, std430) uniform SceneNodeConstants {\n")
         + "   mat4 model;\n"
@@ -182,20 +184,20 @@ void ResourceLoader::loadModel(const std::string &fileName, std::unique_ptr<Scen
         } else if(line.substr(0, 2) == "Kd") {
             materials.back()->setColor(textToVec3(line.substr(3)));
 
-        }/* else if(line.substr(0, 6) == "map_Kd") {
+        } else if(line.substr(0, 6) == "map_Kd") {
             startPos = line.find_last_of('/');
             materials.back()->setDiffuseTexture(line.substr(startPos+1));
-        }*/ else if(line.substr(0, 2) == "Ks") {
+        } else if(line.substr(0, 2) == "Ks") {
             auto specular = textToVec3(line.substr(3));
             materials.back()->setSpecular((specular.x + specular.y + specular.z) / 3.0f);
 
         } else if(line.substr(0, 2) == "Ns") {
             materials.back()->setRoughness(std::stof(line.substr(3)));
 
-        }/* else if(line.substr(0, 6) == "map_Ns") {
+        } else if(line.substr(0, 6) == "map_Ns") {
             startPos = line.find_last_of('/');
             materials.back()->setRoughnessTexture(line.substr(startPos+1));
-        }*/
+        }
     }
     mtlFile.close();
 

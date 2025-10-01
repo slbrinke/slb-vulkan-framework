@@ -30,12 +30,45 @@ MaterialUniforms Material::getUniformData() {
         m_sheen,
         m_sheenTint,
         m_translucency,
-        -1,
-        -1,
-        -1,
-        0.0f, 0.0f, 0.0f //padding for now
+        -1, //diffuse texture index initialized in the scene
+        -1, //normal texture index initialized in the scene
+        -1, //roughness texture index initialized in the scene
+        -1, //metallic texture index initialized in the scene
+        0.0f, 0.0f //padding for now
     };
     return matUniforms;
+}
+
+bool Material::hasDiffuseTexture() {
+    return !m_diffuseTextureFile.empty();
+}
+
+std::string Material::getDiffuseTexture() {
+    return m_diffuseTextureFile;
+}
+
+bool Material::hasNormalTexture() {
+    return !m_normalTextureFile.empty();
+}
+
+std::string Material::getNormalTexture() {
+    return m_normalTextureFile;
+}
+
+bool Material::hasRoughnessTexture() {
+    return !m_roughnessTextureFile.empty();
+}
+
+std::string Material::getRoughnessTexture() {
+    return m_roughnessTextureFile;
+}
+
+bool Material::hasMetallicTexture() {
+    return !m_metallicTextureFile.empty();
+}
+
+std::string Material::getMetallicTexture() {
+    return m_metallicTextureFile;
 }
 
 void Material::setIndex(uint32_t index) {
@@ -76,4 +109,20 @@ void Material::setSheen(float sheen) {
 
 void Material::setSheenTint(float tint) {
     m_sheenTint = tint;
+}
+
+void Material::setDiffuseTexture(std::string fileName) {
+    m_diffuseTextureFile = fileName;
+}
+
+void Material::setNormalTexture(std::string fileName) {
+    m_normalTextureFile = fileName;
+}
+
+void Material::setRoughnessTexture(std::string fileName) {
+    m_roughnessTextureFile = fileName;
+}
+
+void Material::setMetallicTexture(std::string fileName) {
+    m_metallicTextureFile = fileName;
 }

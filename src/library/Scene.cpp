@@ -43,6 +43,12 @@ void Scene::init(std::shared_ptr<Context> &context, std::vector<DescriptorSet> &
         m_lightUniforms.resize(MAX_LIGHTS);
     }
     descriptorSets[1].addBuffer("Lights", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_LIGHTS * sizeof(LightUniforms), false, nullptr);
+
+    std::vector<VkImageView> textureImageViews;
+    for(auto &texture : m_textures) {
+        textureImageViews.emplace_back(texture.getView());
+    }
+    descriptorSets[1].addImages(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, textureImageViews);
 }
 
 void Scene::initSceneNode(std::shared_ptr<Context> &context, std::unique_ptr<SceneNode> &sceneNode, glm::mat4 parentModel) {
@@ -56,6 +62,27 @@ void Scene::initSceneNode(std::shared_ptr<Context> &context, std::unique_ptr<Sce
         auto &mat = sceneNode->getMaterial();
         if(!mat->hasIndex()) {
             m_materialUniforms.emplace_back(mat->getUniformData());
+
+            if(mat->hasDiffuseTexture()) {
+                m_textures.emplace_back(context, mat->getDiffuseTexture());
+                m_materialUniforms[m_numMaterials].diffuseTextureIndex = m_numTextures;
+                m_numTextures++;
+            }
+            if(mat->hasNormalTexture()) {
+                m_textures.emplace_back(context, mat->getNormalTexture());
+                m_materialUniforms[m_numMaterials].normalTextureIndex = m_numTextures;
+                m_numTextures++;
+            }
+            if(mat->hasRoughnessTexture()) {
+                m_textures.emplace_back(context, mat->getRoughnessTexture());
+                m_materialUniforms[m_numMaterials].roughnessTextureIndex = m_numTextures;
+                m_numTextures++;
+            }
+            if(mat->hasMetallicTexture()) {
+                m_textures.emplace_back(context, mat->getMetallicTexture());
+                m_materialUniforms[m_numMaterials].metallicTextureIndex = m_numTextures;
+                m_numTextures++;
+            }
 
             mat->setIndex(m_numMaterials);
             m_numMaterials++;
@@ -85,4 +112,8 @@ void Scene::renderMeshes(VkCommandBuffer commandBuffer, VkPipelineLayout pipelin
 
 void Scene::cleanUp(std::shared_ptr<Context> &context) {
     m_rootNode->cleanUp(context);
+
+    for(auto &texture : m_textures) {
+        texture.cleanUp(context);
+    }
 }

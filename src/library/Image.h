@@ -25,6 +25,9 @@ public:
      * @param usage vulkan flags indicated the purpose of the image
      */
     Image(uint32_t width, uint32_t height, VkImageUsageFlags usage = VK_IMAGE_USAGE_SAMPLED_BIT);
+
+    Image(std::shared_ptr<Context> &context, const std::string &fileName);
+
     ~Image();
 
     /**

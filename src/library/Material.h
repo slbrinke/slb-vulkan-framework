@@ -31,9 +31,9 @@ struct MaterialUniforms {
     int diffuseTextureIndex;
     int normalTextureIndex;
     int roughnessTextureIndex;
+    int metallicTextureIndex;
     float pad1;
     float pad2;
-    float pad3;
 };
 
 /**
@@ -86,6 +86,70 @@ public:
      * @return MaterialUniforms instance containing all relevant brdf parameters
      */
     MaterialUniforms getUniformData();
+
+    /**
+     * Check if there is a diffuse texture assigned to the material.
+     * 
+     * @return true if the material has a diffuse texture
+     */
+    bool hasDiffuseTexture();
+
+    /**
+     * Return the file name of the image used as diffuse texture.
+     * 
+     * Once loaded the texture is used as material base color.
+     * 
+     * @return name of the diffuse texture file
+     */
+    std::string getDiffuseTexture();
+
+    /**
+     * Check if there is a normal map assigned to the material.
+     * 
+     * @return true if the material has a normal texture
+     */
+    bool hasNormalTexture();
+
+    /**
+     * Return the file name of the image used as normal texture.
+     * 
+     * Once loaded the texture is used as normal map.
+     * 
+     * @return name of the normal texture file
+     */
+    std::string getNormalTexture();
+
+    /**
+     * Check if there is a roughness texture assigned to the material.
+     * 
+     * @return true if the material has a roughness texture
+     */
+    bool hasRoughnessTexture();
+
+    /**
+     * Return the file name of the image used as a roughness texture.
+     * 
+     * Once loaded the texture is used as material roughness.
+     * 
+     * @return name of the roughness texture file
+     */
+    std::string getRoughnessTexture();
+
+    /**
+     * Check if there is a metallic texture assigned to the material.
+     * 
+     * @return true if the material has a metallic texture
+     */
+    bool hasMetallicTexture();
+
+    /**
+     * Return the file name of the image used as a metallic texture.
+     * 
+     * Once loaded the texture is used as metallic parameter.
+     * 
+     * @return name of the metallic texture file
+     */
+    std::string getMetallicTexture();
 
     /**
      * Assign an index to the material.
@@ -183,6 +247,46 @@ public:
      */
     void setSheenTint(float tint);
 
+    /**
+     * Add a texture as material base color.
+     * 
+     * The image itself is loaded later when the scene is initialized.
+     * For now the material only stores the file name.
+     * 
+     * @param fileName name of an image file in resources/textures
+     */
+    void setDiffuseTexture(std::string fileName);
+
+    /**
+     * Add a texture as normal map.
+     * 
+     * The image itself is loaded later when the scene is initialized.
+     * For now the material only stores the file name.
+     * 
+     * @param fileName name of an image file in resources/textures
+     */
+    void setNormalTexture(std::string fileName);
+
+    /**
+     * Add a texture as material roughness.
+     * 
+     * The image itself is loaded later when the scene is initialized.
+     * For now the material only stores the file name.
+     * 
+     * @param fileName name of an image file in resources/textures
+     */
+    void setRoughnessTexture(std::string fileName);
+
+    /**
+     * Add a texture as metallic parameter.
+     * 
+     * The image itself is loaded later when the scene is initialized.
+     * For now the material only stores the file name.
+     * 
+     * @param fileName name of an image file in resources/textures
+     */
+    void setMetallicTexture(std::string fileName);
+
 private:
     uint32_t m_index = std::numeric_limits<uint32_t>::max(); /**< Unique index identifying the material in the scene */
     std::string m_name = "Unnamed Material"; /**< Unique name identifying the material e.g. in an .mtl file */
@@ -196,6 +300,11 @@ private:
     float m_sheen = 0.0f; /**< Additional sheen effect for things like fabric */
     float m_sheenTint = 0.0f; /**< Parameter mixing the base color into the sheen component */
     float m_translucency = 0.0f; /**< Maximum thickness at which light shines through an object */
+
+    std::string m_diffuseTextureFile = ""; /**< File containing the image used as a base color texture */
+    std::string m_normalTextureFile = ""; /**< File containing the image used as a normal map */
+    std::string m_roughnessTextureFile = ""; /**< File containing the image used as roughness map */
+    std::string m_metallicTextureFile = ""; /**< File containing the image used a metallic map */
     
 };
 

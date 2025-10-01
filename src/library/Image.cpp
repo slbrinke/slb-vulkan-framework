@@ -7,6 +7,10 @@ Image::Image(uint32_t width, uint32_t height, VkImageUsageFlags usage)
 
 }
 
+Image::Image(std::shared_ptr<Context> &context, const std::string &fileName) {
+    loadTexture(context, fileName);
+}
+
 Image::~Image() {
 
 }

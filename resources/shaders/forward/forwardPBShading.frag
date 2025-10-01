@@ -2,11 +2,13 @@
 
 layout(location = 0) in vec3 passPositionCamera;
 layout(location = 1) in vec3 passNormalCamera;
+layout(location = 2) in vec2 passTexCoord;
 
 #include Camera
 #include Renderer
 #include Materials
 #include Lights
+#include Textures
 #include SceneNodeConstants
 
 layout(location = 0) out vec4 fragmentColor;
@@ -73,7 +75,7 @@ vec3 getSpecularLighting(vec3 normalCamera, vec3 lightVector, vec3 viewVector, v
     return nl * matSpecular;
 }
 
-vec3 getPBShading(vec3 normalCamera, vec3 lightVector, vec3 viewVector, vec3 baseColor) {
+vec3 getPBShading(vec3 normalCamera, vec3 lightVector, vec3 viewVector, vec3 baseColor, float roughness) {
     vec3 halfVector = normalize(lightVector + viewVector);
     float nl = max(dot(normalCamera, lightVector), 0.0);
     float nv = max(dot(normalCamera, viewVector), 0.0);
@@ -82,17 +84,17 @@ vec3 getPBShading(vec3 normalCamera, vec3 lightVector, vec3 viewVector, vec3 bas
 
     //diffuse component
     vec3 matDiffuse = baseColor * renderer.inversePi;
-    float FD = 0.5 + 2.0 * materials[materialIndex].roughness * lh * lh;
+    float FD = 0.5 + 2.0 * roughness * lh * lh;
     matDiffuse *= (1.0 + (FD - 1.0) * pow(1.0 - nl, 5.0)) * (1.0 + (FD - 1.0) * pow(1.0 - nv, 5.0));
 
     //specular component
-    float alpha = materials[materialIndex].roughness * materials[materialIndex].roughness;
+    float alpha = roughness * roughness;
     float tmp = nh * nh * (alpha * alpha - 1.0) + 1.0; 
     float D = alpha * alpha / (renderer.pi * tmp*tmp);
     vec3 F0 = materials[materialIndex].metallic * baseColor + (1.0 - materials[materialIndex].metallic) * vec3(0.04);
     vec3 F = F0 + (vec3(1.0) - F0) * pow(1.0 - lh, 5.0);
     matDiffuse *= vec3(1.0) - F;
-    float kDirect = 0.125 * (materials[materialIndex].roughness + 1.0) * (materials[materialIndex].roughness + 1.0);
+    float kDirect = 0.125 * (roughness + 1.0) * (roughness + 1.0);
     float G = nv / (nv * (1.0 - kDirect) + kDirect);
     vec3 matSpecular = D * G * (materials[materialIndex].specularTint * baseColor + (1.0 - materials[materialIndex].specularTint) * vec3(1.0));
     matSpecular *= F;
@@ -105,7 +107,19 @@ vec3 getPBShading(vec3 normalCamera, vec3 lightVector, vec3 viewVector, vec3 bas
 }
 
 void main() {
-    vec3 baseColor = materials[materialIndex].color;
+    Material material = materials[materialIndex];
+
+    vec3 baseColor = material.color;
+    if(material.diffuseTextureIndex > -1) {
+        vec4 diffuseData = texture(materialTextures[material.diffuseTextureIndex], passTexCoord);
+        baseColor = vec3(diffuseData);
+    }
+
+    float roughness = material.roughness;
+    if(material.roughnessTextureIndex > -1) {
+        roughness = texture(materialTextures[material.roughnessTextureIndex], passTexCoord).x;
+    }
+
     vec3 normalCamera = passNormalCamera;
     vec3 viewVector = normalize(-passPositionCamera);
 
@@ -116,7 +130,7 @@ void main() {
         vec3 lightVector;
         vec3 lightColor = getLightAttenuation(passPositionCamera, l, lightVector);
 
-        matFinal += getPBShading(normalCamera, lightVector, viewVector, baseColor);
+        matFinal += getPBShading(normalCamera, lightVector, viewVector, baseColor, roughness);
     }
 
     fragmentColor = vec4(matFinal, 1.0);

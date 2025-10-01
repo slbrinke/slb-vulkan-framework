@@ -3,6 +3,7 @@
 
 #include "ResourceLoader.h"
 #include "DescriptorSet.h"
+#include "Image.h"
 #include "Light.h"
 
 const uint32_t MAX_MATERIALS = 5;
@@ -108,6 +109,9 @@ private:
 
     uint32_t m_numMaterials = 0; /**< Number of materials applied throughout the scene graph */
     std::vector<MaterialUniforms> m_materialUniforms; /**< Uniform data for all materials in the scene */
+    uint32_t m_numTextures = 0; /**< Number of textures attached to the materials */
+    std::vector<Image> m_textures; /**< Texture images required by the materials */
+
     uint32_t m_numLights = 0; /**< Number of light sources in the scene graph */
     std::vector<LightUniforms> m_lightUniforms; /**< Uniform data for all lights in the scene */
 

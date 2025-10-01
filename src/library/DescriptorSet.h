@@ -89,8 +89,9 @@ public:
     void addImage(VkDescriptorType descriptorType, VkImageView imageView);
 
     /**
-     * Add an image resource to the descriptor set.
+     * Add set of of images to the descriptor set.
      * 
+     * The set can be declared as an array of images in the shader.
      * If the descriptorType is VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER and m_imageSampler is VK_NULL_HANDLE, the sampler is created here.
      * 
      * @param descriptorType type distinguishing between VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER and VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT

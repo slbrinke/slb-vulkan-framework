@@ -3,6 +3,10 @@
 
 #include "ResourceLoader.h"
 #include "DescriptorSet.h"
+#include "Light.h"
+
+const uint32_t MAX_MATERIALS = 5;
+const uint32_t MAX_LIGHTS = 5;
 
 /**
  * Three-dimensional scene defining geometry and surfaces.
@@ -36,6 +40,20 @@ public:
      * @param sceneNode pointer to a new scene node
      */
     void addSceneNode(std::unique_ptr<SceneNode> &sceneNode);
+
+    /**
+     * Add the sun as a default light source.
+     * 
+     * The sun is represented by a directional light source added to the root node of the scene graph.
+     * Where the sun is on the hemisphere is dictated by the angles theta and phi.
+     * Both are given in degrees, theta has to be in range [-0.5*pi, 0.5*pi], and phi in range [0, 2*pi].
+     * 
+     * @param theta vertical angle in degrees
+     * @param phi horizontal angle in degrees
+     * @param color light color emitted by the sun
+     * @param intensity light intensity emitted by the sun
+     */
+    void addSun(float theta, float phi, glm::vec3 color, float intensity);
 
     /**
      * Initialize meshes, materials, and descriptor sets.
@@ -80,8 +98,9 @@ private:
      * 
      * @param context pointer to the vulkan context
      * @param sceneNode node in the scene graph
+     * @param parentModel model matrix of the parent node
      */
-    void initSceneNode(std::shared_ptr<Context> &context, std::unique_ptr<SceneNode> &sceneNode);
+    void initSceneNode(std::shared_ptr<Context> &context, std::unique_ptr<SceneNode> &sceneNode, glm::mat4 parentModel = glm::mat4(1.0f));
 
     glm::vec3 m_backgroundColor{0.43f, 0.38f, 0.3f}; /**< Color displayed in the background of the scene */
 
@@ -89,6 +108,8 @@ private:
 
     uint32_t m_numMaterials = 0; /**< Number of materials applied throughout the scene graph */
     std::vector<MaterialUniforms> m_materialUniforms; /**< Uniform data for all materials in the scene */
+    uint32_t m_numLights = 0; /**< Number of light sources in the scene graph */
+    std::vector<LightUniforms> m_lightUniforms; /**< Uniform data for all lights in the scene */
 
 };
 

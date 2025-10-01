@@ -2,7 +2,7 @@
 
 #include "Context.h"
 #include "Camera.h"
-#include "Renderer.h"
+#include "StandardRenderers.h"
 
 #include "ResourceLoader.h"
 
@@ -32,8 +32,9 @@ int main() {
     ResourceLoader::loadModel("bottle", testNode);
     testNode->scale(0.1f);
     scene->addSceneNode(testNode);
+    scene->addSun(30.0f, 50.0f, glm::vec3(0.85f, 0.67f, 0.29f), 1.0f);
 
-    SimpleRenderer renderer(context, camera, scene);
+    ForwardRenderer renderer(context, camera, scene);
 
     while(!glfwWindowShouldClose(context->getWindow().get())) {
         glfwPollEvents();

@@ -31,7 +31,7 @@ void RenderStep::createShaderModules(const std::vector<std::string> &shaderFiles
         createInfo.codeSize = code.size();
         createInfo.pCode = reinterpret_cast<const uint32_t*>(code.data());
         if(vkCreateShaderModule(m_context->getDevice(), &createInfo, nullptr, &m_shaderModules[shader]) != VK_SUCCESS) {
-            throw std::runtime_error("PIPELINE ERROR: Could not create shader module: " + shaderFiles[shader]);
+            throw std::runtime_error("RENDER STEP ERROR: Could not create shader module: " + shaderFiles[shader]);
         }
         m_shaderStages.emplace_back(getShaderStage(shaderFiles[shader]));
     }
@@ -234,7 +234,7 @@ void RenderStep::initRenderStep(RenderOutput &output, uint32_t subPassIndex) {
     pipelineLayoutInfo.pPushConstantRanges = pushConstants.data();
 
     if(vkCreatePipelineLayout(m_context->getDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
-        throw std::runtime_error("PIPELINE ERROR: Could not create pipeline layout");
+        throw std::runtime_error("RENDER STEP ERROR: Could not create pipeline layout");
     }
     pipelineInfo.layout = m_pipelineLayout;
 
@@ -244,7 +244,7 @@ void RenderStep::initRenderStep(RenderOutput &output, uint32_t subPassIndex) {
     pipelineInfo.basePipelineIndex = -1;
 
     if(vkCreateGraphicsPipelines(m_context->getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
-        throw std::runtime_error("PIPELINE ERROR: Could not create graphics pipeline");
+        throw std::runtime_error("RENDER STEP ERROR: Could not create graphics pipeline");
     }
 }
 

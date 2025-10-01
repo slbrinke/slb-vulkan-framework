@@ -14,6 +14,8 @@ set(LIB_SOURCES
         ${LIB_DIR}/DescriptorSet.h
         ${LIB_DIR}/Image.cpp
         ${LIB_DIR}/Image.h
+        ${LIB_DIR}/Light.cpp
+        ${LIB_DIR}/Light.h
         ${LIB_DIR}/Material.cpp
         ${LIB_DIR}/Material.h
         ${LIB_DIR}/Mesh.cpp
@@ -31,6 +33,8 @@ set(LIB_SOURCES
         ${LIB_DIR}/Scene.h
         ${LIB_DIR}/SceneNode.cpp
         ${LIB_DIR}/SceneNode.h
+        ${LIB_DIR}/StandardRenderers.cpp
+        ${LIB_DIR}/StandardRenderers.h
 )
 
 add_library(slbLib STATIC ${LIB_SOURCES})

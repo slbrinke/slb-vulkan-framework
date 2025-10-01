@@ -96,6 +96,7 @@ void Renderer::setUpRenderOutput() {
 void Renderer::setUpDescriptorSets() {
     m_descriptorSets.resize(2, DescriptorSet(m_context, m_numSwapChainImages));
     m_descriptorSets[0].addBuffer("Camera", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, sizeof(CameraUniforms), false);
+    m_descriptorSets[0].addBuffer("Renderer", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, sizeof(RendererUniforms), false);
 
     m_scene->init(m_context, m_descriptorSets);
 
@@ -165,6 +166,13 @@ void Renderer::update() {
         m_camera->getProjectionMatrix()
     };
     m_descriptorSets[0].updateBuffer("Camera", frameIndex, &camUniforms);
+    RendererUniforms rendererUniforms {
+        glm::pi<float>(),
+        1.0f / glm::pi<float>(),
+        0.001f,
+        0.0f
+    };
+    m_descriptorSets[0].updateBuffer("Renderer", frameIndex, &rendererUniforms);
 
     m_scene->updateUniforms(m_descriptorSets, frameIndex);
 

@@ -3,6 +3,7 @@
 
 #include "Mesh.h"
 #include "Material.h"
+#include "Light.h"
 
 /**
  * Temporary rendering information associated with the current scene node.
@@ -61,6 +62,19 @@ public:
     std::shared_ptr<Material> &getMaterial();
 
     /**
+     * Check if the scene node contains a light source.
+     */
+    bool hasLight();
+
+    /**
+     * Return a pointer to the light source attached to the scene node.
+     * 
+     * Lights are stored in a unique pointer because the uniform information is unique for each light source.
+     * When retrieving e.g. the world position of a light source in a shader multiple instances of the same light would return the same data otherwise.
+     */
+    std::unique_ptr<Light> &getLight();
+
+    /**
      * Provide references to the list of children within the scene graph hierarchy.
      * @return List of pointers to the child scene nodes.
      */
@@ -112,8 +126,22 @@ public:
     void addMesh(std::shared_ptr<Mesh> &mesh, std::shared_ptr<Material> &material);
 
     /**
+     * Add a light source to the scene node.
+     * 
+     * Light sources cannot be instanced like meshes or materials.
+     * To copy a light to a different position a new light source has to be created.
+     * Since the new light is stored in a unique pointer the pointer will be empty after.
+     * 
+     * @param pointer to the new light source
+     */
+    void addLight(std::unique_ptr<Light> &light);
+
+    /**
      * Add a scene node into the scene graph hierarchy below this node.
+     * 
      * All local transformations will affect the new child node.
+     * Since the new node is stored in a unique pointer the pointer will be empty after.
+     * 
      * @param child Unique pointer to the scene node added as a child.
      */
     void addChild(std::unique_ptr<SceneNode> &child);
@@ -144,6 +172,8 @@ private:
     
     std::shared_ptr<Mesh> m_mesh = nullptr; /**< Geometry rendered with the transformations of this scene node */
     std::shared_ptr<Material> m_material = nullptr; /**< Material applied to the mesh instance */
+
+    std::unique_ptr<Light> m_light = nullptr; /**< Light source emitting light into the scene */
 
     std::vector<std::unique_ptr<SceneNode>> m_children; /**< Child nodes subject to this node's transformations */
 

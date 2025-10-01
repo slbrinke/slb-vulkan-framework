@@ -9,7 +9,7 @@ Material::~Material() {
 }
 
 bool Material::hasIndex() {
-    return m_index < std::numeric_limits<uint32_t>::max();
+    return m_index != std::numeric_limits<uint32_t>::max();
 }
 
 uint32_t Material::getIndex() {
@@ -52,4 +52,28 @@ void Material::setColor(glm::vec3 color) {
 
 void Material::setColor(float r, float g, float b) {
     m_color = glm::vec3(r, g, b);
+}
+
+void Material::setRoughness(float roughness) {
+    m_roughness = roughness;
+}
+
+void Material::setMetallic(float metallic) {
+    m_metallic = metallic;
+}
+
+void Material::setSpecular(float specular) {
+    m_specular = specular;
+}
+
+void Material::setSpecularTint(float tint) {
+    m_specularTint = tint;
+}
+
+void Material::setSheen(float sheen) {
+    m_sheen = sheen;
+}
+
+void Material::setSheenTint(float tint) {
+    m_sheenTint = tint;
 }

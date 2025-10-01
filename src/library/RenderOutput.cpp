@@ -131,7 +131,7 @@ void RenderOutput::addDepthAttachment(VkFormat depthFormat, float clearDepth, bo
         subPass.useMultisampling = true;
 
         if(isExternalInput) {
-            throw std::runtime_error("RENDER PASS ERROR: Depth attachment cannot be multisampled because depth resolve is not implemented here");
+            throw std::runtime_error("RENDER OUTPUT ERROR: Depth attachment cannot be multisampled because depth resolve is not implemented here");
         }
         m_numMultisampledImages++;
     }
@@ -414,7 +414,7 @@ void RenderOutput::start(VkCommandBuffer commandBuffer, uint32_t frameIndex) {
 
 void RenderOutput::switchSubPass(VkCommandBuffer commandBuffer, uint32_t dstSubPass) {
     if(dstSubPass < m_currentSubPass || dstSubPass >= m_numSubPasses) {
-        throw std::runtime_error("RENDER PASS ERROR: Subpasses need to be ordered according to how they are used");
+        throw std::runtime_error("RENDER OUTPUT ERROR: Subpasses need to be ordered according to how they are used");
     }
 
     while(m_currentSubPass < dstSubPass) {

@@ -90,7 +90,7 @@ public:
     /**
      * Assign an index to the material.
      * 
-     * During rendering this index can be used as a uniform.
+     * During rendering this index can be used as a push constant.
      * 
      * @param index unique index identifying the material
      */
@@ -122,6 +122,66 @@ public:
      * @param b blue-channel value of the new base color
      */
     void setColor(float r, float g, float b);
+
+    /**
+     * Change the roughness parameter.
+     * 
+     * It can technically take on values between 0.0 (shiny) and 1.0 (matte).
+     * But since area lights are not implemented here small values are clamped to a minimum.
+     * 
+     * @param roughness new roughness value
+     */
+    void setRoughness(float roughness);
+
+    /**
+     * Change the metallic parameter.
+     * 
+     * The higher the value the more the surface looks like metal.
+     * Per default it is 0.0 and the maximum is 1.0.
+     * 
+     * @param metallic new metallic value
+     */
+    void setMetallic(float metallic);
+
+    /**
+     * Change the specular parameter.
+     * 
+     * It scales the strength of the specular highlight.
+     * Per default it is 1.0 and for 0.0 the highlight disappears.
+     * 
+     * @param specular new specular value
+     */
+    void setSpecular(float specular);
+
+    /**
+     * Change the specular tint parameter.
+     * 
+     * It scales how strongly the base color is mixed into the specular highlight.
+     * Per default it is 0.0 and the maximum is 1.0.
+     * 
+     * @param tint new specular tint value
+     */
+    void setSpecularTint(float tint);
+
+    /**
+     * Change the sheen parameter.
+     * 
+     * It scales an optional grazing component.
+     * Per default it is 0.0 and the maximum is 1.0.
+     * 
+     * @param sheen new sheen value
+     */
+    void setSheen(float sheen);
+
+    /**
+     * Change the sheen tint parameter.
+     * 
+     * It scales how strongly the base color is mixed into the sheen component.
+     * Per default it is 0.0 and the maximum is 1.0.
+     * 
+     * @param tint new sheen tint value
+     */
+    void setSheenTint(float tint);
 
 private:
     uint32_t m_index = std::numeric_limits<uint32_t>::max(); /**< Unique index identifying the material in the scene */

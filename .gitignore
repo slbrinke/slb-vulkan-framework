@@ -1,3 +1,5 @@
 .vscode/
 build/
 src/library/path_config.h
+resources/shaders/spir-v/
+resources/shaders/used/

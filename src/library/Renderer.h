@@ -12,6 +12,16 @@
 #include "RenderStep.h"
 
 /**
+ * Uniform data providing constants used for different purposes in the shader.
+ */
+struct RendererUniforms {
+    float pi;
+    float inversePi;
+    float epsilon;
+    float pad;
+};
+
+/**
  * Renderer baseclass containing basic rendering functionality.
  * 
  * The subclasses implement different rendering strategies by defining custom render output and render steps.

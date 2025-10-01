@@ -31,6 +31,14 @@ std::shared_ptr<Material> &SceneNode::getMaterial() {
     return m_material;
 }
 
+bool SceneNode::hasLight() {
+    return m_light != nullptr;
+}
+
+std::unique_ptr<Light> &SceneNode::getLight() {
+    return m_light;
+}
+
 std::vector<std::unique_ptr<SceneNode>> &SceneNode::getChildren() {
     return m_children;
 }
@@ -54,6 +62,10 @@ void SceneNode::scale(float scale) {
 void SceneNode::addMesh(std::shared_ptr<Mesh> &mesh, std::shared_ptr<Material> &material) {
     m_mesh = mesh;
     m_material = material;
+}
+
+void SceneNode::addLight(std::unique_ptr<Light> &light) {
+    m_light = std::move(light);
 }
 
 void SceneNode::addChild(std::unique_ptr<SceneNode> &child) {

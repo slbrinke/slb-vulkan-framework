@@ -36,6 +36,8 @@ int main() {
     modelNode->getChildren().back().get()->setPosition(glm::vec3(0.23f, 0.0f, 0.3f));
     modelNode->getChildren().back().get()->rotate(190.0f, glm::vec3(0.0f, 1.0f, 0.0f));
     modelNode->getChildren().back().get()->scale(0.1f);
+    ResourceLoader::loadModel("pink_crystal", modelNode);
+    modelNode->getChildren().back().get()->scale(0.1f);
     scene->addSceneNode(modelNode);
     scene->addSun(30.0f, 50.0f, glm::vec3(0.85f, 0.67f, 0.29f), 1.0f);
 
@@ -53,13 +55,14 @@ int main() {
     for(int l=0; l<3; l++) {
         auto sceneNode = std::make_unique<SceneNode>();
         auto light = std::make_unique<Light>(lightPositions[l], glm::normalize(-lightPositions[l]));
+        light->setRange(3.0f);
         light->setColor(lightColors[l]);
         sceneNode->addLight(light);
         lightsNode->addChild(sceneNode);
     }
     scene->addSceneNode(lightsNode);
 
-    ForwardRenderer renderer(context, camera, scene);
+    DeferredRenderer renderer(context, camera, scene);
 
     while(!glfwWindowShouldClose(context->getWindow().get())) {
         glfwPollEvents();

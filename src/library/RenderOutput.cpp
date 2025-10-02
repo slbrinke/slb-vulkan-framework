@@ -14,6 +14,10 @@ RenderOutput::~RenderOutput() {
     m_context = nullptr;
 }
 
+uint32_t RenderOutput::getIndex() {
+    return m_index;
+}
+
 uint32_t RenderOutput::getNumSubPassColorAttachments(uint32_t subPassIndex) {
     if(subPassIndex < m_numSubPasses) {
         return m_subPasses[subPassIndex].numColorAttachments;
@@ -33,6 +37,22 @@ bool RenderOutput::subPassUsesDepth(uint32_t subPassIndex) {
 bool RenderOutput::subPassUsesMultisampling(uint32_t subPassIndex) {
     if(subPassIndex < m_numSubPasses) {
         return m_subPasses[subPassIndex].useMultisampling;
+    }
+
+    throw std::runtime_error("RENDER OUTPUT ERROR: There is no subpass with index " + subPassIndex);
+}
+
+bool RenderOutput::subPassHasInputs(uint32_t subPassIndex) {
+    if(subPassIndex < m_numSubPasses) {
+        return !m_subPasses[subPassIndex].subPassInputs.empty() || !m_subPasses[subPassIndex].externalInputs.empty();
+    }
+
+    throw std::runtime_error("RENDER OUTPUT ERROR: There is no subpass with index " + subPassIndex);
+}
+
+DescriptorSet &RenderOutput::getInputDescriptorSet(uint32_t subPassIndex) {
+    if(subPassIndex < m_numSubPasses) {
+        return m_inputDescriptorSets[m_subPasses[subPassIndex].descriptorSetIndex];
     }
 
     throw std::runtime_error("RENDER OUTPUT ERROR: There is no subpass with index " + subPassIndex);
@@ -215,11 +235,15 @@ void RenderOutput::addRenderPassInput(VkImageView imageView, bool isDepth) {
     m_subPasses[m_numSubPasses - 1].externalInputs.emplace_back(imageView, isDepth);
 }
 
-void RenderOutput::init() {
+void RenderOutput::init(uint32_t index) {
+    m_index = index;
+
     createAttachments();
     createSubPasses();
     createFramebuffers();
-    std::cout << "   RENDER OUTPUT: Created output with " << m_numSubPasses << " subpasses and " << m_numAttachments << " attachments." << std::endl;
+    createInputDescriptors();
+
+    std::cout << "   RENDER OUTPUT: Created output " << m_index << " with " << m_numSubPasses << " subpasses and " << m_numAttachments << " attachments." << std::endl;
 }
 
 void RenderOutput::createAttachments() {
@@ -397,6 +421,26 @@ void RenderOutput::createFramebuffers() {
     }
 }
 
+void RenderOutput::createInputDescriptors() {
+    for(auto &subPass : m_subPasses) {
+        if(!subPass.subPassInputs.empty() || !subPass.externalInputs.empty()) {
+            subPass.descriptorSetIndex = m_inputDescriptorSets.size();
+            m_inputDescriptorSets.resize(subPass.descriptorSetIndex + 1, DescriptorSet(m_context, m_numFramesInFlight));
+
+            for(auto &input : subPass.subPassInputs) {
+                auto &source = m_attachments[m_subPasses[input.first].firstAttachment + input.second];
+                m_inputDescriptorSets[subPass.descriptorSetIndex].addImage(VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, m_images[source.mainIndex].getView());
+            }
+
+            for(auto &input : subPass.externalInputs) {
+                m_inputDescriptorSets[subPass.descriptorSetIndex].addImage(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, input.first);
+            }
+
+            m_inputDescriptorSets[subPass.descriptorSetIndex].init();
+        }
+    }
+}
+
 void RenderOutput::start(VkCommandBuffer commandBuffer, uint32_t frameIndex) {
     VkRenderPassBeginInfo renderPassBeginInfo{};
     renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
@@ -435,6 +479,9 @@ void RenderOutput::end(VkCommandBuffer commandBuffer) {
 }
 
 void RenderOutput::cleanUp() {
+    for(auto &descriptorSet : m_inputDescriptorSets) {
+        descriptorSet.cleanUp();
+    }
     vkDestroyRenderPass(m_context->getDevice(), m_renderPass, nullptr);
     for(auto frameBuffer : m_frameBuffers) {
         vkDestroyFramebuffer(m_context->getDevice(), frameBuffer, nullptr);

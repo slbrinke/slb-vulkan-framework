@@ -90,6 +90,24 @@ void SceneNode::renderMesh(VkCommandBuffer commandBuffer, VkPipelineLayout pipel
     }
 }
 
+void SceneNode::renderLightProxy(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, glm::mat4 parentModel) {
+    auto model = parentModel * getModelMatrix();
+
+    if(m_light != nullptr) {
+        SceneNodeConstants constants {
+            m_light->getProxyModel(model),
+            m_light->getIndex()
+        };
+        vkCmdPushConstants(commandBuffer, pipelineLayout, VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT, 0, sizeof(SceneNodeConstants), &constants);
+
+        m_light->getProxyMesh()->render(commandBuffer, 1);
+    }
+
+    for(auto &child : m_children) {
+        child->renderLightProxy(commandBuffer, pipelineLayout, model);
+    }
+}
+
 void SceneNode::cleanUp(std::shared_ptr<Context> &context) {
     if(m_mesh != nullptr && m_mesh->hasBuffers()) {
         m_mesh->cleanUp(context);

@@ -15,10 +15,10 @@
  * Uniform data providing constants used for different purposes in the shader.
  */
 struct RendererUniforms {
-    float pi;
-    float inversePi;
-    float epsilon;
-    float pad;
+    float pi; /**< The mathematical constant pi */
+    float inversePi; /**< One divided by pi */
+    float epsilon; /**< Very small value */
+    float pad; /**< Padding for now */
 };
 
 /**
@@ -154,20 +154,6 @@ private:
     uint32_t m_swapChainImageIndex = 0; /**< Index of the current swap chain image */
     bool m_frameBufferResized = false;
     
-};
-
-/**
- * Simple test renderer implementing the Renderer baseclass.
- */
-class SimpleRenderer : public Renderer {
-public:
-    SimpleRenderer(std::shared_ptr<Context> &context, std::shared_ptr<Camera> &camera, std::shared_ptr<Scene> &scene);
-    ~SimpleRenderer() = default;
-
-private:
-    void setUpRenderOutput() override;
-    void setUpRenderSteps() override;
-
 };
 
 #endif //SLBVULKAN_RENDERER_H

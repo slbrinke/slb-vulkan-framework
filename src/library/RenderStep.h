@@ -8,6 +8,14 @@
 #include "Mesh.h"
 
 /**
+ * Render mode dictating the type of compute or draw call executed in a render step.
+ */
+enum RenderMode {
+    renderMeshes, /**< Instanced render call for each mesh in the scene */
+    renderLightProxies, /**< Deferred rendering of proxy geometry for each light source in the scene */
+};
+
+/**
  * Individual step in the rendering process.
  * 
  * Manages a vulkan pipeline, a shader set, and different render settings.
@@ -34,11 +42,36 @@ public:
     VkPipelineLayout getPipelineLayout();
 
     /**
+     * Return the type of compute or draw call executed in the render step.
+     */
+    RenderMode getRenderMode();
+
+    /**
+     * Return the dispatch size or number of instances of the compute or draw call.
+     */
+    uint32_t getRenderSize();
+
+    /**
+     * Return the index of the render output this step renders to.
+     */
+    uint32_t getOutputIndex();
+
+    /**
+     * Return the index of the subset of images within the render output.
+     */
+    uint32_t getSubPassIndex();
+
+    /**
      * Change the name displayed as debug label.
      * 
      * @param name new name describing the render step
      */
     void setName(std::string name);
+
+    /**
+     * Change the type of compute or draw call executed by this render step.
+     */
+    void setRenderMode(RenderMode mode, uint32_t renderSize = 1);
 
     /**
      * Load shader files and create shader modules.
@@ -52,6 +85,24 @@ public:
      * @param sceneCounts numbers of different components in the scene
      */
     void createShaderModules(const std::vector<std::string> &shaderFiles, std::vector<DescriptorSet> &descriptorSets, std::vector<uint32_t> &sceneCounts);
+
+    /**
+     * Change the culling settings for rendering.
+     * 
+     * Per default culling is set to VK_CULL_MODE_NONE.
+     * If it is set to VK_CULL_MODE_BACK_BIT only front faces are rendered.
+     * If it is set to VK_CULL_MODE_FRONT_BIT only back faces are rendered.
+     * 
+     * @param mode vulkan specification of the new cull mode
+     */
+    void setCullMode(VkCullModeFlags mode);
+
+    /**
+     * Activate blending during this render step.
+     * 
+     * Blend factors are all set to one.
+     */
+    void enableBlending();
 
     /**
      * Set up vulkan pipeline with the specified shaders and render settings.
@@ -118,6 +169,11 @@ private:
 
     VkPipelineLayout m_pipelineLayout = VK_NULL_HANDLE; /**< Vulkan pipeline layout encompassing descriptor sets and push constants */
     VkPipeline m_pipeline = VK_NULL_HANDLE; /**< Vulkan pipeline containing all relevant settings and components of the render step */
+
+    RenderMode m_renderMode = renderMeshes; /**< Main compute or draw command */
+    uint32_t m_renderSize = 1; /**< Dispatch size or number of instances of the main compute or draw command */
+    uint32_t m_outputIndex = 0; /**< Index of the output this step renders to within the renderer */
+    uint32_t m_subPassIndex = 0; /**< Index of the subpass within the render output */
 
 };
 

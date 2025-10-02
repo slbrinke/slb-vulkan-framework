@@ -163,7 +163,10 @@ void Renderer::update() {
     //update uniforms
     CameraUniforms camUniforms{
         m_camera->getViewMatrix(),
-        m_camera->getProjectionMatrix()
+        m_camera->getProjectionMatrix(),
+        static_cast<float>(m_imageExtent.width),
+        static_cast<float>(m_imageExtent.height),
+        0.0f, 0.0f
     };
     m_descriptorSets[0].updateBuffer("Camera", frameIndex, &camUniforms);
     RendererUniforms rendererUniforms {
@@ -315,15 +318,32 @@ void Renderer::recordGraphicsCommandBuffer() {
     uint32_t frameIndex = m_currentFrame % m_numSwapChainImages;
     auto commandBuffer = m_graphicsCommandBuffers[frameIndex];
 
-    //uint32_t renderPassIndex = 0;
-    //uint32_t subPassIndex = 0;
-    //m_renderOutput[renderPassIndex].start(commandBuffer, frameIndex);
+    uint32_t outputIndex = 0;
+    uint32_t subPassIndex = 0;
+    m_renderOutput[outputIndex].start(commandBuffer, frameIndex);
 
-    m_renderOutput[0].start(commandBuffer, frameIndex);
-    m_renderSteps[0].start(commandBuffer, frameIndex);
-    m_scene->renderMeshes(commandBuffer, m_renderSteps[0].getPipelineLayout());
-    m_renderSteps[0].end(commandBuffer);
-    m_renderOutput[1].end(commandBuffer);
+
+    for(auto &renderStep : m_renderSteps) {
+        if(renderStep.getOutputIndex() > outputIndex) {
+            m_renderOutput[outputIndex].end(commandBuffer);
+            outputIndex = renderStep.getOutputIndex();
+            subPassIndex = 0;
+            m_renderOutput[outputIndex].start(commandBuffer, frameIndex);
+        }
+        if(renderStep.getSubPassIndex() > subPassIndex) {
+            subPassIndex = renderStep.getSubPassIndex();
+            m_renderOutput[outputIndex].switchSubPass(commandBuffer, subPassIndex);
+        }
+
+        renderStep.start(commandBuffer, frameIndex);
+        if(renderStep.getRenderMode() == renderMeshes) {
+            m_scene->renderMeshes(commandBuffer, renderStep.getPipelineLayout(), renderStep.getRenderSize());
+        } else if(renderStep.getRenderMode() == renderLightProxies) {
+            m_scene->renderLightProxies(commandBuffer, renderStep.getPipelineLayout());
+        }
+        renderStep.end(commandBuffer);
+    }
+    m_renderOutput[outputIndex].end(commandBuffer);
 }
 
 void Renderer::cleanUp() {
@@ -346,31 +366,4 @@ void Renderer::cleanUp() {
     if(m_swapChain != VK_NULL_HANDLE) {
         vkDestroySwapchainKHR(m_context->getDevice(), m_swapChain, nullptr);
     }
-}
-
-SimpleRenderer::SimpleRenderer(std::shared_ptr<Context> &context, std::shared_ptr<Camera> &camera, std::shared_ptr<Scene> &scene)
-: Renderer(context, camera, scene) {
-    setUpRenderOutput();
-    setUpDescriptorSets();
-    setUpRenderSteps();
-    createCommandBuffers();
-    createSyncObjects();
-}
-
-void SimpleRenderer::setUpRenderOutput() {
-    m_renderOutput.emplace_back(m_context, m_numSwapChainImages, m_imageExtent, 1, true);
-    auto bgColor = m_scene->getBackgroundColor();
-    m_renderOutput.back().addSwapChainAttachment(m_swapChain, m_swapChainFormat, glm::vec4(bgColor, 1.0f));
-
-    for(auto &output : m_renderOutput) {
-        output.init();
-    }
-}
-
-void SimpleRenderer::setUpRenderSteps() {
-    m_renderSteps.emplace_back(m_context, m_numSwapChainImages);
-    m_renderSteps.back().setName("Simple Rendering");
-    auto sceneCounts = m_scene->getSceneCounts();
-    m_renderSteps.back().createShaderModules({"simple.vert", "simple.frag"}, m_descriptorSets, sceneCounts);
-    m_renderSteps.back().initRenderStep(m_renderOutput[0], 0);
 }

@@ -25,6 +25,7 @@ struct LightUniforms {
  * Light source contributing to the lighting of the scene.
  * 
  * Directional lights are distinguished from spot lights by setting the cone opening angle to zero.
+ * Directional light is assumed to theoretically reach every point in the scene, so the range is irrelevant in this case.
  * Point lights are distinguished from spot lights by setting the cone opening angle to 180°.
  */
 class Light {
@@ -69,6 +70,37 @@ public:
      * @return LightUniforms instance containing all relevant light properties
      */
     LightUniforms getUniformData(glm::mat4 model);
+
+    /**
+     * Check if this is a directional light.
+     * 
+     * A light source is intrepreted as a directional light if the cone opening angle is set to zero.
+     * Directional light is assumed to theoretically reach every point in the scene, so the range is irrelevant in this case.
+     */
+    bool isDirectionalLight();
+
+    /**
+     * Check if this is a point light.
+     * 
+     * A light source is interpreted as a point light if the cone opening angle is set to 180°.
+     */
+    bool isPointLight();
+
+    /**
+     * Return the model matrix to apply to the proxy geometry.
+     * 
+     * @param model accumulated model matrix of the scene node containing this light source
+     */
+    glm::mat4 getProxyModel(glm::mat4 model);
+
+    /**
+     * Return a pointer to the proxy geometry matching the light type.
+     * 
+     * The proxy mesh representes the space reached by light from this light source.
+     * All proxy meshes themselves are stored in the scene.
+     * And the mesh reference is assigned when the light is added to the scene.
+     */
+    std::shared_ptr<Mesh> &getProxyMesh();
 
     /**
      * Assign an index to the light source.
@@ -142,6 +174,17 @@ public:
      * @param intensity new light intensity
      */
     void setIntensity(float intensity);
+
+    /**
+     * Assign a reference to the proxy mesh matching the light source type.
+     * 
+     * This is called by the init function in the scene.
+     * If this is a directional light the assigned mesh is a screen quad.
+     * If this is a point light the assigned mesh is a sphere.
+     * Otherwise this is a spot light and the assigned mesh is a cone.
+     * @param proxy pointer to the proxy mesh representing the light source during deferred rendering
+     */
+    void setProxyMesh(std::shared_ptr<Mesh> &proxy);
 
 private:
     uint32_t m_index = std::numeric_limits<uint32_t>::max(); /**< Unique index identifying the light source in the scene */

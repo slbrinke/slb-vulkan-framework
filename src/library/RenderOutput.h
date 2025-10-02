@@ -3,6 +3,7 @@
 
 #include "Context.h"
 #include "Image.h"
+#include "DescriptorSet.h"
 
 /**
  * Render attachment for a specific output image.
@@ -25,9 +26,9 @@ struct SubPass {
     uint32_t numAttachments = 0; /**< Number of attachments associated with the subpass */
     uint32_t firstAttachment = 0; /**< Index of the first attachment associated with the subpass */
 
-    std::vector<std::pair<uint32_t, uint32_t>> subPassInputs;
-    std::vector<std::pair<VkImageView,bool>> externalInputs;
-    uint32_t descriptorSetIndex = 0;
+    std::vector<std::pair<uint32_t, uint32_t>> subPassInputs; /**< Indices of the attachments of previous subpasses used as input in this subpass */
+    std::vector<std::pair<VkImageView,bool>> externalInputs; /**< Attachment images from previous render outputs used as input in this output */
+    uint32_t descriptorSetIndex = 0; /**< Index of the descriptor set required if there are inputs for this subpass */
 
     uint32_t numColorAttachments = 0; /**< Number of color output attachments */
     bool useDepth = false; /**< True if the subpass has a depth attachment */
@@ -58,6 +59,13 @@ public:
     ~RenderOutput();
 
     /**
+     * Return the index assigned to the output by a renderer.
+     * 
+     * Render steps can use this index to indicate which output to render to.
+     */
+    uint32_t getIndex();
+
+    /**
      * Return the number of color attachments of a specific subpass.
      * 
      * @param subPassIndex index of the subpass within the render output
@@ -80,6 +88,21 @@ public:
      * @return true if the subpass attachments use multisampling
      */
     bool subPassUsesMultisampling(uint32_t subPassIndex);
+
+    /**
+     * Check whether there are inputs defined for a specific subpass.
+     * 
+     * @param subPassIndex index of the subpass within the render output
+     * @return true if the subpass has at least on subpass or external input
+     */
+    bool subPassHasInputs(uint32_t subPassIndex);
+
+    /**
+     * Return the descriptor set managing subpass and external inputs for a specific subpass.
+     * 
+     * @param subPassIndex index of the subpass within the render output
+     */
+    DescriptorSet &getInputDescriptorSet(uint32_t subPassIndex);
 
     /**
      * Return the vulkan renderpass encompassing all output images.
@@ -143,8 +166,10 @@ public:
      * 
      * Has to be called before using the render output.
      * Subpasses, attachments, and inputs cannot be changed after.
+     * 
+     * @param index 
      */
-    void init();
+    void init(uint32_t index);
 
     /**
      * Activate the render output.
@@ -208,7 +233,16 @@ private:
      */
     void createFramebuffers();
 
+    /**
+     * Create and initialize descriptor sets for the subpasses with inputs.
+     * 
+     * For each subpass the inputs from other subpasses are added as descriptors with type VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT.
+     * And external subpasses are added as descriptors with type VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER.
+     */
+    void createInputDescriptors();
+
     std::shared_ptr<Context> m_context; /**< Pointer to the vulkan context */
+    uint32_t m_index = std::numeric_limits<uint32_t>::max(); /**< Unique index identifying the output set in the renderer */
 
     uint32_t m_numFramesInFlight; /**< Number of images necessary for swap chain attachment */
     VkExtent2D m_imageExtent; /**< Size of the output images in number of pixels */
@@ -229,9 +263,10 @@ private:
     uint32_t m_numResolveImages = 0; /**< Total numbers of multisampling resolve images */
     std::vector<Image> m_images; /**< List of output images including multisampling resolve images */
 
-    uint32_t m_numSubPassInputs = 0;
-
     std::vector<VkFramebuffer> m_frameBuffers; /**< Framebuffers for frames in flight */
+
+    uint32_t m_numSubPassInputs = 0; /**< Total number of inputs defined between subpasses in this output set */
+    std::vector<DescriptorSet> m_inputDescriptorSets; /**< Descriptor sets communicating subpass and external inputs to shaders */
 
     uint32_t m_currentSubPass = 0; /**< Index of the active subpass */
 

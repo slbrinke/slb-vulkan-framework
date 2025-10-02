@@ -6,5 +6,6 @@ The rendering library started out based on the vulkan tutorial by Alexander Over
 and is successively extended to test out different rendering techniques.
 
 Currently a scene containing simple meshes, materials and light sources, arranged in a scene graph hierarchy, can be defined.
-A simple renderer visualizes the scene in a forward pass with physically-based shading based on:
-Burley, Brent, and Walt Disney Animation Studios. "Physically-based shading at disney." Acm siggraph. Vol. 2012. No. 2012. vol. 2012, 2012.
+A simple forward renderer or a deferred renderer can be used to visualize the scene.
+The shaders implement physically-based shading based on:
+Burley, Brent, and Walt Disney Animation Studios. "Physically-based shading at disney." Acm siggraph. Vol. 2012. No. 2012.

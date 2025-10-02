@@ -18,4 +18,20 @@ private:
     void setUpRenderSteps() override;
 };
 
+/**
+ * Deferred renderer using physically-based shading.
+ * 
+ * Records geometry data in a gbuffer and then renders light proxy geometry in a second pass.
+ */
+class DeferredRenderer : public Renderer {
+public:
+    DeferredRenderer(std::shared_ptr<Context> &context, std::shared_ptr<Camera> &camera, std::shared_ptr<Scene> &scene);
+    ~DeferredRenderer() = default;
+
+private:
+    void setUpRenderOutput() override;
+    void setUpRenderSteps() override;
+    
+};
+
 #endif //SLBVULKAN_STANDARDRENDERERS_H

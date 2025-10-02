@@ -11,8 +11,8 @@
  * Used to communicate scene node information to shaders as push constants.
  */
 struct SceneNodeConstants {
-    glm::mat4 model;
-    uint32_t materialIndex;
+    glm::mat4 model; /**< Model matrix transforming local coordiantes to world coordinates */
+    uint32_t currentIndex; /**< Index of a relevant component e.g. material, light source, etc. */
 };
 
 /**
@@ -157,6 +157,17 @@ public:
      * @param parentModel model matrix of the parent node
      */
     void renderMesh(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t numInstances, glm::mat4 parentModel = glm::mat4(1.0f));
+
+    /**
+     * Render the proxy geometry of the attached light source.
+     * 
+     * Recursively called for all child nodes.
+     * 
+     * @param commandBuffer graphics command buffer receiving the draw command
+     * @param pipelineLayout pipeline layout of the current render step
+     * @param parentModel model matrix of the parent node
+     */
+    void renderLightProxy(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, glm::mat4 parentModel = glm::mat4(1.0f));
 
     /**
      * Destroy all vulkan components.

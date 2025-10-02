@@ -13,8 +13,29 @@ VkPipelineLayout RenderStep::getPipelineLayout() {
     return m_pipelineLayout;
 }
 
+RenderMode RenderStep::getRenderMode() {
+    return m_renderMode;
+}
+
+uint32_t RenderStep::getRenderSize() {
+    return m_renderSize;
+}
+
+uint32_t RenderStep::getOutputIndex() {
+    return m_outputIndex;
+}
+
+uint32_t RenderStep::getSubPassIndex() {
+    return m_subPassIndex;
+}
+
 void RenderStep::setName(std::string name) {
     m_name = name;
+}
+
+void RenderStep::setRenderMode(RenderMode mode, uint32_t renderSize) {
+    m_renderMode = mode;
+    m_renderSize = renderSize;
 }
 
 void RenderStep::createShaderModules(const std::vector<std::string> &shaderFiles, std::vector<DescriptorSet> &descriptorSets, std::vector<uint32_t> &sceneCounts) {
@@ -67,13 +88,21 @@ VkShaderStageFlagBits RenderStep::getShaderStage(const std::string &fileName) {
     throw std::runtime_error("RENDER STEP ERROR: Unknown shader file type " + fileType);
 }
 
+void RenderStep::setCullMode(VkCullModeFlags mode) {
+    m_cullMode = mode;
+}
+
+void RenderStep::enableBlending() {
+    m_useBlending = true;
+}
+
 void RenderStep::initRenderStep(RenderOutput &output, uint32_t subPassIndex) {
     m_bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     VkGraphicsPipelineCreateInfo pipelineInfo{};
     pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 
-    //m_renderPassIndex = renderPass.getIndex();
-    //m_subPassIndex = subPassIndex;
+    m_outputIndex = output.getIndex();
+    m_subPassIndex = subPassIndex;
 
     //shaders
     std::vector<VkPipelineShaderStageCreateInfo> shaderInfos(m_shaderModules.size());
@@ -214,14 +243,12 @@ void RenderStep::initRenderStep(RenderOutput &output, uint32_t subPassIndex) {
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
 
     //descriptor set layouts
-    /*
-    if(renderPass.subPassHasInputs(m_subPassIndex)) {
-        m_descriptorSetLayouts.emplace_back(renderPass.getInputDescriptorSet(m_subPassIndex).getLayout());
+    if(output.subPassHasInputs(m_subPassIndex)) {
+        m_descriptorSetLayouts.emplace_back(output.getInputDescriptorSet(m_subPassIndex).getLayout());
         for(uint32_t frame=0; frame<m_numFramesInFlight; frame++) {
-            m_descriptorSets[frame].emplace_back(renderPass.getInputDescriptorSet(m_subPassIndex).getSet(frame));
+            m_descriptorSets[frame].emplace_back(output.getInputDescriptorSet(m_subPassIndex).getSet(frame));
         }
     }
-        */
     pipelineLayoutInfo.setLayoutCount = m_descriptorSetLayouts.size();
     pipelineLayoutInfo.pSetLayouts = m_descriptorSetLayouts.data();
 

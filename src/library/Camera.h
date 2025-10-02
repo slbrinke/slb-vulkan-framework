@@ -29,10 +29,15 @@ struct CameraKeyFrame {
  * GPU representation of the relevant camera parameters.
  * 
  * Used to pass view and projection matrix to shaders.
+ * Width and height of the screen is also added as float values to get screen coordinates in the shader without having to cast to float every time.
  */
 struct CameraUniforms {
-    glm::mat4 viewMatrix;
-    glm::mat4 projectionMatrix;
+    glm::mat4 viewMatrix; /**< Matrix converting world coordinates to camera coordinates */
+    glm::mat4 projectionMatrix; /**< Matrix converting camera coordinates to screen coordinates */
+    float screenWidth; /**< Width of the rendered image in number of pixels */
+    float screenHeight; /**< Height of the rendered image in number of pixels */
+    float pad1; /**< Padding for now */
+    float pad2; /**< Padding for now */
 };
 
 /**

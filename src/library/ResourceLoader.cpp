@@ -46,9 +46,14 @@ void ResourceLoader::findRequiredDescriptorSets(const std::string &fileName, std
 uint32_t ResourceLoader::getDescriptorSetIndex(std::string descriptorName) {
     if(descriptorName == "Camera" || descriptorName == "Renderer") {
         return 0;
+
     } else if(descriptorName == "Materials" || descriptorName == "Lights" || descriptorName == "SceneCounts"
         || descriptorName == "Textures" || descriptorName == "SceneNodeConstants") {
         return 1;
+
+    } else if(descriptorName == "GBuffer") {
+        return 2;
+
     }
     
     throw std::runtime_error("RESOURCE LOADER ERROR: There is no descriptor with the name " + descriptorName);
@@ -112,6 +117,10 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         return "layout(set = " + std::to_string(setIndex) + ", binding = 0) uniform CameraUniforms {\n"
         + "   mat4 view;\n"
         + "   mat4 projection;\n"
+        + "   float screenWidth;\n"
+        + "   float screenHeight;\n"
+        + "   float pad1;\n"
+        + "   float pad2;\n"
         + "}camera;\n\n";
     } else if(descriptorName == "Renderer") {
         return "layout(set = " + std::to_string(setIndex) + ", binding = 1) uniform RendererUniforms {\n"
@@ -161,8 +170,13 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
     } else if(descriptorName == "SceneNodeConstants") {
         return std::string("layout(push_constant, std430) uniform SceneNodeConstants {\n")
         + "   mat4 model;\n"
-        + "   uint materialIndex;\n"
+        + "   uint currentIndex;\n"
         + "};\n\n";
+    } else if(descriptorName == "GBuffer") {
+        return "layout(input_attachment_index = 0, set = " + std::to_string(setIndex) + ", binding = 0) uniform subpassInputMS gBufferNormals;\n"
+        + "layout(input_attachment_index = 1, set = " + std::to_string(setIndex) + ", binding = 1) uniform subpassInputMS gBufferMaterials1;\n"
+        + "layout(input_attachment_index = 2, set = " + std::to_string(setIndex) + ", binding = 2) uniform subpassInputMS gBufferMaterials2;\n"
+        + "layout(input_attachment_index = 3, set = " + std::to_string(setIndex) + ", binding = 3) uniform subpassInputMS gBufferDepth;\n\n";
     }
 
     throw std::runtime_error("RESOURCE LOADER ERROR: There is no descriptor with name " + descriptorName);
@@ -202,6 +216,9 @@ void ResourceLoader::loadModel(const std::string &fileName, std::unique_ptr<Scen
         } else if(line.substr(0, 6) == "map_Ns") {
             startPos = line.find_last_of('/');
             materials.back()->setRoughnessTexture(line.substr(startPos+1));
+        } else if(line.substr(0, 8) == "map_Bump") {
+            startPos = line.find_last_of('/');
+            materials.back()->setNormalTexture(line.substr(startPos+1));
         }
     }
     mtlFile.close();

@@ -29,6 +29,11 @@ public:
      */
     glm::vec3 getBackgroundColor();
 
+    /**
+     * Return the total numbers of different components of the scene.
+     * 
+     * Including the number of materials, light sources, and textures extracted from the scene graph.
+     */
     std::vector<uint32_t> getSceneCounts();
 
     /**
@@ -85,6 +90,23 @@ public:
     void renderMeshes(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t numInstances = 1);
 
     /**
+     * Record the draw command for a screen-aligned quad.
+     * 
+     * @param commandBuffer graphics command buffer receiving the draw command
+     */
+    void renderScreenQuad(VkCommandBuffer commandBuffer);
+
+    /**
+     * Record draw calls for the proxy geometry of each light source in the scene graph.
+     * 
+     * Serves as the second step for a deferred renderer.
+     * 
+     * @param commandBuffer graphics command buffer receiving the draw command
+     * @param pipelineLayout pipeline layout of the current render step
+     */
+    void renderLightProxies(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout);
+
+    /**
      * Destroy all vulkan components.
      * 
      * Calls cleanUp function for all meshes in the scene graph.
@@ -113,6 +135,8 @@ private:
 
     uint32_t m_numLights = 0; /**< Number of light sources in the scene graph */
     std::vector<LightUniforms> m_lightUniforms; /**< Uniform data for all lights in the scene */
+
+    std::vector<std::shared_ptr<Mesh>> m_defaultMeshes; /**< Default meshes required for deferred rendering */
 
 };
 

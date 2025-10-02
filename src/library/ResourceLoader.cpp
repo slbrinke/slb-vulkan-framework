@@ -46,14 +46,15 @@ void ResourceLoader::findRequiredDescriptorSets(const std::string &fileName, std
 uint32_t ResourceLoader::getDescriptorSetIndex(std::string descriptorName) {
     if(descriptorName == "Camera" || descriptorName == "Renderer") {
         return 0;
-    } else if(descriptorName == "Materials" || descriptorName == "Lights" || descriptorName == "Textures" || descriptorName == "SceneNodeConstants") {
+    } else if(descriptorName == "Materials" || descriptorName == "Lights" || descriptorName == "SceneCounts"
+        || descriptorName == "Textures" || descriptorName == "SceneNodeConstants") {
         return 1;
     }
     
     throw std::runtime_error("RESOURCE LOADER ERROR: There is no descriptor with the name " + descriptorName);
 }
 
-std::string ResourceLoader::compileShader(const std::string &fileName, std::vector<uint32_t> &requiredDescriptorSets) {
+std::string ResourceLoader::compileShader(const std::string &fileName, std::vector<uint32_t> &requiredDescriptorSets, std::vector<uint32_t> &sceneCounts) {
     auto slashPos = fileName.find_last_of('/');
     auto periodPos = fileName.find_last_of('.');
 
@@ -82,7 +83,7 @@ std::string ResourceLoader::compileShader(const std::string &fileName, std::vect
             while(setIndex < requiredDescriptorSets.size() && requiredDescriptorSets[setIndex] < absoluteIndex) {
                 setIndex++;
             }
-            outputFile << getDescriptorText(descriptorName, setIndex);
+            outputFile << getDescriptorText(descriptorName, setIndex, sceneCounts);
             
         } else {
             outputFile << line << "\n";
@@ -106,7 +107,7 @@ std::string ResourceLoader::compileShader(const std::string &fileName, std::vect
     return compiledName;
 }
 
-std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32_t setIndex) {
+std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32_t setIndex, std::vector<uint32_t> &sceneCounts) {
     if(descriptorName == "Camera") {
         return "layout(set = " + std::to_string(setIndex) + ", binding = 0) uniform CameraUniforms {\n"
         + "   mat4 view;\n"
@@ -137,7 +138,7 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         + "   float pad2;\n"
         + "};\n\n"
         + "layout(set = " + std::to_string(setIndex) + ", binding = 0) uniform MaterialUniforms {\n"
-        + "   Material materials[5];\n"
+        + "   Material materials[" + std::to_string(sceneCounts[0]) + "];\n"
         + "};\n\n";
     } else if(descriptorName == "Lights") {
         return std::string("struct Light {\n")
@@ -149,10 +150,14 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         + "   float intensity;\n"
         + "};\n\n"
         + "layout(set = " + std::to_string(setIndex) + ", binding = 1) uniform LightUniforms {\n"
-        + "   Light lights[5];\n"
+        + "   Light lights[" + std::to_string(sceneCounts[1]) + "];\n"
+        + "};\n\n";
+    } else if(descriptorName == "SceneCounts") {
+        return std::string("layout(set = " + std::to_string(setIndex) + ", binding = 2) buffer SceneCountBuffer {\n")
+        + "   uint sceneCounts[];\n"
         + "};\n\n";
     } else if(descriptorName == "Textures") {
-        return std::string("layout(set = " + std::to_string(setIndex) + ", binding = 2) uniform sampler2D materialTextures[2];");
+        return std::string("layout(set = " + std::to_string(setIndex) + ", binding = 3) uniform sampler2D materialTextures[" + std::to_string(sceneCounts[2]) + "];\n\n");
     } else if(descriptorName == "SceneNodeConstants") {
         return std::string("layout(push_constant, std430) uniform SceneNodeConstants {\n")
         + "   mat4 model;\n"
@@ -192,7 +197,7 @@ void ResourceLoader::loadModel(const std::string &fileName, std::unique_ptr<Scen
             materials.back()->setSpecular((specular.x + specular.y + specular.z) / 3.0f);
 
         } else if(line.substr(0, 2) == "Ns") {
-            materials.back()->setRoughness(std::stof(line.substr(3)));
+            materials.back()->setRoughness(1.0f - 0.001f * std::stof(line.substr(3)));
 
         } else if(line.substr(0, 6) == "map_Ns") {
             startPos = line.find_last_of('/');

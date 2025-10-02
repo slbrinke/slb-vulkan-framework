@@ -49,8 +49,9 @@ public:
      * 
      * @param shaderFiles names of shader files in the resources/shaders/file
      * @param descriptorSets list of all shader resource sets that the required subset is extracted from
+     * @param sceneCounts numbers of different components in the scene
      */
-    void createShaderModules(const std::vector<std::string> &shaderFiles, std::vector<DescriptorSet> &descriptorSets);
+    void createShaderModules(const std::vector<std::string> &shaderFiles, std::vector<DescriptorSet> &descriptorSets, std::vector<uint32_t> &sceneCounts);
 
     /**
      * Set up vulkan pipeline with the specified shaders and render settings.

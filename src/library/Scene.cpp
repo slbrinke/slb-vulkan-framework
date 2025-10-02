@@ -8,6 +8,11 @@ glm::vec3 Scene::getBackgroundColor() {
     return m_backgroundColor;
 }
 
+std::vector<uint32_t> Scene::getSceneCounts() {
+    std::vector<uint32_t> counts = {m_numMaterials, m_numLights, m_numTextures};
+    return counts;
+}
+
 void Scene::addSceneNode(std::unique_ptr<SceneNode> &sceneNode) {
     m_rootNode->addChild(sceneNode);
 }
@@ -28,21 +33,10 @@ void Scene::addSun(float theta, float phi, glm::vec3 color, float intensity) {
 void Scene::init(std::shared_ptr<Context> &context, std::vector<DescriptorSet> &descriptorSets) {
     initSceneNode(context, m_rootNode);
 
-    if(m_materialUniforms.size() > MAX_MATERIALS) {
-        throw std::runtime_error("SCENE ERROR: Can only contain " + std::to_string(MAX_MATERIALS) + " materials.");
-    }
-    if(m_materialUniforms.size() < MAX_MATERIALS) {
-        m_materialUniforms.resize(MAX_MATERIALS);
-    }
-    descriptorSets[1].addBuffer("Materials", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_MATERIALS * sizeof(MaterialUniforms), false, nullptr);
-    
-    if(m_lightUniforms.size() > MAX_LIGHTS) {
-        throw std::runtime_error("SCENE ERROR: Can only contain " + std::to_string(MAX_LIGHTS) + " light sources.");
-    }
-    if(m_lightUniforms.size() < MAX_LIGHTS) {
-        m_lightUniforms.resize(MAX_LIGHTS);
-    }
-    descriptorSets[1].addBuffer("Lights", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, MAX_LIGHTS * sizeof(LightUniforms), false, nullptr);
+    descriptorSets[1].addBuffer("Materials", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_numMaterials * sizeof(MaterialUniforms), false, nullptr);
+    descriptorSets[1].addBuffer("Lights", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_numLights * sizeof(LightUniforms), false, nullptr);
+    std::vector<uint32_t> sceneCounts = {m_numMaterials, m_numLights,m_numTextures};
+    descriptorSets[1].addBuffer("SceneCounts", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, sceneCounts.size() * sizeof(uint32_t), false, sceneCounts.data());
 
     std::vector<VkImageView> textureImageViews;
     for(auto &texture : m_textures) {
@@ -104,6 +98,8 @@ void Scene::initSceneNode(std::shared_ptr<Context> &context, std::unique_ptr<Sce
 void Scene::updateUniforms(std::vector<DescriptorSet> &descriptorSets, uint32_t frameIndex) {
     descriptorSets[1].updateBuffer("Materials", frameIndex, m_materialUniforms.data());
     descriptorSets[1].updateBuffer("Lights", frameIndex, m_lightUniforms.data());
+    //auto sceneCounts = getSceneCounts();
+    //descriptorSets[1].updateBuffer("SceneCounts", frameIndex, sceneCounts.data());
 }
 
 void Scene::renderMeshes(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t numInstances) {

@@ -23,6 +23,9 @@ void ForwardRenderer::setUpRenderOutput() {
 void ForwardRenderer::setUpRenderSteps() {
     m_renderSteps.emplace_back(m_context, m_numSwapChainImages);
     m_renderSteps.back().setName("Render Geometry to Screen");
-    m_renderSteps.back().createShaderModules({"forward/forwardPBShading.vert", "forward/forwardPBShading.frag"}, m_descriptorSets);
+    auto sceneCounts = m_scene->getSceneCounts();
+    m_renderSteps.back().createShaderModules(
+        {"forward/forwardPBShading.vert", "forward/forwardPBShading.frag"},
+        m_descriptorSets, sceneCounts);
     m_renderSteps.back().initRenderStep(m_renderOutput[0], 0);
 }

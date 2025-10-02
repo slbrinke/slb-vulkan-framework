@@ -370,6 +370,7 @@ void SimpleRenderer::setUpRenderOutput() {
 void SimpleRenderer::setUpRenderSteps() {
     m_renderSteps.emplace_back(m_context, m_numSwapChainImages);
     m_renderSteps.back().setName("Simple Rendering");
-    m_renderSteps.back().createShaderModules({"simple.vert", "simple.frag"}, m_descriptorSets);
+    auto sceneCounts = m_scene->getSceneCounts();
+    m_renderSteps.back().createShaderModules({"simple.vert", "simple.frag"}, m_descriptorSets, sceneCounts);
     m_renderSteps.back().initRenderStep(m_renderOutput[0], 0);
 }

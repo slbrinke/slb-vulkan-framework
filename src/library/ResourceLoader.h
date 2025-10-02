@@ -43,9 +43,10 @@ public:
      * 
      * @param fileName name of a shader file in the resources/shaders/ folder
      * @param requiredDescriptorSets list of indices of the descriptor sets required by all shaders in the shader set
+     * @param sceneCounts numbers of different components in the scene
      * @return modified name of the compiled shader file
      */
-    static std::string compileShader(const std::string &fileName, std::vector<uint32_t> &requiredDescriptorSets);
+    static std::string compileShader(const std::string &fileName, std::vector<uint32_t> &requiredDescriptorSets, std::vector<uint32_t> &sceneCounts);
 
     /**
      * Read an .obj and .mtl file and convert it to renderable meshes with materials.
@@ -78,9 +79,10 @@ private:
      * 
      * @param descriptorName unique name identifying the descriptor
      * @param setIndex relative index of the descriptor set
+     * @param sceneCounts numbers of different components in the scene
      * @return shader code defining the descriptor
      */
-    static std::string getDescriptorText(std::string descriptorName, uint32_t setIndex);
+    static std::string getDescriptorText(std::string descriptorName, uint32_t setIndex, std::vector<uint32_t> &sceneCounts);
 
     /**
      * Convert the file text representing a 2-component vector into a glm vector.

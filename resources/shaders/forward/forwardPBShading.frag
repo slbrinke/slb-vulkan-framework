@@ -8,12 +8,13 @@ layout(location = 2) in vec2 passTexCoord;
 #include Renderer
 #include Materials
 #include Lights
+#include SceneCounts
 #include Textures
 #include SceneNodeConstants
 
 layout(location = 0) out vec4 fragmentColor;
 
-vec3 getLightAttenuation(vec3 positionCamera, int lightIndex, out vec3 lightVector) {
+vec3 getLightAttenuation(vec3 positionCamera, uint lightIndex, out vec3 lightVector) {
     Light light = lights[lightIndex];
     float intensity = light.intensity;
 
@@ -123,14 +124,14 @@ void main() {
     vec3 normalCamera = passNormalCamera;
     vec3 viewVector = normalize(-passPositionCamera);
 
-    vec3 matFinal = vec3(0.0, 0.0, 0.0);
+    //ambient base
+    vec3 matFinal = 0.1 * baseColor;
     
-    int numLights = 1;
-    for(int l=0; l<numLights; l++) {
+    for(uint l=0; l<sceneCounts[1]; l++) {
         vec3 lightVector;
         vec3 lightColor = getLightAttenuation(passPositionCamera, l, lightVector);
 
-        matFinal += getPBShading(normalCamera, lightVector, viewVector, baseColor, roughness);
+        matFinal += lightColor * getPBShading(normalCamera, lightVector, viewVector, baseColor, roughness);
     }
 
     fragmentColor = vec4(matFinal, 1.0);

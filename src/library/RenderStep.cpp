@@ -17,14 +17,14 @@ void RenderStep::setName(std::string name) {
     m_name = name;
 }
 
-void RenderStep::createShaderModules(const std::vector<std::string> &shaderFiles, std::vector<DescriptorSet> &descriptorSets) {
+void RenderStep::createShaderModules(const std::vector<std::string> &shaderFiles, std::vector<DescriptorSet> &descriptorSets, std::vector<uint32_t> &sceneCounts) {
     for(size_t shader=0; shader<shaderFiles.size(); shader++) {
         ResourceLoader::findRequiredDescriptorSets(shaderFiles[shader], m_requiredDescriptorSets);
     }
 
     m_shaderModules.resize(shaderFiles.size());
     for(size_t shader=0; shader<shaderFiles.size(); shader++) {
-        auto compiledName = ResourceLoader::compileShader(shaderFiles[shader], m_requiredDescriptorSets);
+        auto compiledName = ResourceLoader::compileShader(shaderFiles[shader], m_requiredDescriptorSets, sceneCounts);
         auto code = ResourceLoader::loadFile(compiledName);
         VkShaderModuleCreateInfo createInfo{};
         createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

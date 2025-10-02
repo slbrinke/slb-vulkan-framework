@@ -6,9 +6,6 @@
 #include "Image.h"
 #include "Light.h"
 
-const uint32_t MAX_MATERIALS = 5;
-const uint32_t MAX_LIGHTS = 5;
-
 /**
  * Three-dimensional scene defining geometry and surfaces.
  * 
@@ -31,6 +28,8 @@ public:
      * @return background color in rgb format
      */
     glm::vec3 getBackgroundColor();
+
+    std::vector<uint32_t> getSceneCounts();
 
     /**
      * Add a new scene node to the scene graph.

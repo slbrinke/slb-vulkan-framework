@@ -263,7 +263,7 @@ void Image::loadTexture(std::shared_ptr<Context> &context, const std::string &fi
     //image settings
     m_width = static_cast<uint32_t>(width);
     m_height = static_cast<uint32_t>(height);
-    m_format = VK_FORMAT_R8G8B8A8_SRGB;
+    m_format = VK_FORMAT_R8G8B8A8_UNORM;
     m_aspect = VK_IMAGE_ASPECT_COLOR_BIT;
 
     //write image content to buffer first

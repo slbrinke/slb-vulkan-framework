@@ -42,9 +42,9 @@ DeferredRenderer::DeferredRenderer(std::shared_ptr<Context> &context, std::share
 void DeferredRenderer::setUpRenderOutput() {
     m_renderOutput.emplace_back(m_context, m_numSwapChainImages, m_imageExtent, 1, true);
     //gbuffer
-    m_renderOutput.back().addColorAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), false);
-    m_renderOutput.back().addColorAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), false);
-    m_renderOutput.back().addColorAttachment(VK_FORMAT_R16G16B16A16_SFLOAT, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), false);
+    m_renderOutput.back().addColorAttachment(VK_FORMAT_R16G16B16A16_UNORM, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), false);
+    m_renderOutput.back().addColorAttachment(VK_FORMAT_R16G16B16A16_UNORM, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), false);
+    m_renderOutput.back().addColorAttachment(VK_FORMAT_R16G16B16A16_UNORM, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), false);
     m_renderOutput.back().addDepthAttachment(m_depthFormat, 1.0f, false);
     //main shading
     m_renderOutput.back().addSubPass(true);

@@ -307,6 +307,10 @@ void ResourceLoader::loadModel(const std::string &fileName, std::unique_ptr<Scen
         if(matIndex >= materials.size()) {
             throw std::runtime_error("RESOURCE LOADER ERROR: Could not assign a material to name " + matNames[m]);
         }
+
+        if(materials[matIndex]->hasNormalTexture()) {
+            meshes[m]->calculateTangents();
+        }
         
         auto sceneNode = std::make_unique<SceneNode>(meshes[m], materials[matIndex]);
         parent->addChild(sceneNode);

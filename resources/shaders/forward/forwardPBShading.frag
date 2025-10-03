@@ -91,7 +91,7 @@ void main() {
         normalCamera = normalize(
             (2.0 * normalData.x - 1.0) * passTangentCamera
             + (2.0 * normalData.y - 1.0) * passBitangentCamera
-            + (2.0 * normalData.z - 1.0) * passNormalCamera);
+            + normalData.z * passNormalCamera);
     }
     vec3 viewVector = normalize(-passPositionCamera);
 

@@ -153,6 +153,40 @@ void Mesh::addCone(glm::vec3 base, float radius, float height, int resolution) {
     }
 }
 
+void Mesh::calculateTangents() {
+    for(size_t i=0; i<m_indices.size()/3; i++) {
+        std::array<uint16_t,3> triIndices = {
+            m_indices[3*i],
+            m_indices[3*i+1],
+            m_indices[3*i+2]
+        };
+        for(size_t j=0; j<3; j++) {
+            m_vertices[m_indices[3*i+j]].tangent = getTangent(
+                triIndices[j],
+                triIndices[(j+1)%3],
+                triIndices[(j+2)%3]
+            );
+        }
+    }
+}
+
+glm::vec3 Mesh::getTangent(uint16_t i0, uint16_t i1, uint16_t i2) {
+    float u1 = m_vertices[i1].texCoord.x - m_vertices[i0].texCoord.x;
+    float u2 = m_vertices[i2].texCoord.x - m_vertices[i0].texCoord.x;
+    float v1 = m_vertices[i1].texCoord.y - m_vertices[i0].texCoord.y;
+    float v2 = m_vertices[i2].texCoord.y - m_vertices[i0].texCoord.y;
+    float invDenom = 1.0f / ((u1*v2) - (u2*v1));
+    float tx = ((v1-v2) * m_vertices[i0].position.x + v2 * m_vertices[i1].position.x - v1 * m_vertices[i2].position.x) * invDenom;
+    float ty = ((v1-v2) * m_vertices[i0].position.y + v2 * m_vertices[i1].position.y - v1 * m_vertices[i2].position.y) * invDenom;
+    float tz = ((v1-v2) * m_vertices[i0].position.z + v2 * m_vertices[i1].position.z - v1 * m_vertices[i2].position.z) * invDenom;
+    //float bx = ((u2-u1) * m_vertices[i0].position.x - u2 * m_vertices[i1].position.x + u1 * m_vertices[i2].position.x) * invDenom;
+    //float by = ((u2-u1) * m_vertices[i0].position.y - u2 * m_vertices[i1].position.y + u1 * m_vertices[i2].position.y) * invDenom;
+    //float bz = ((u2-u1) * m_vertices[i0].position.z - u2 * m_vertices[i1].position.z + u1 * m_vertices[i2].position.z) * invDenom;
+    glm::vec3 tangent = glm::vec3(tx, ty, tz);
+    auto normal = m_vertices[i0].normal;
+    return glm::normalize(tangent - normal * glm::dot(normal, tangent));
+}
+
 void Mesh::createBuffers(std::shared_ptr<Context> &context) {
     if(m_hasBuffers) {
         throw std::runtime_error("MESH ERROR: Buffers have already been created.");

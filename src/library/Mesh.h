@@ -105,6 +105,14 @@ public:
     void addCone(glm::vec3 base, float radius, float height, int resolution);
 
     /**
+     * Reassign tangents for all added vertices.
+     * 
+     * Tangents are generated for the triangles defined via the index list.
+     * Positions and texture coordinates of the vertices are used to calculate the tangents.
+     */
+    void calculateTangents();
+
+    /**
      * Create vulkan representation of the mesh.
      * 
      * Has to be called before rendering the mesh.
@@ -137,6 +145,18 @@ public:
     void cleanUp(std::shared_ptr<Context> &context);
     
 private:
+    /**
+     * Calculate the tangent for a vertex from position and texture coordinates.
+     * 
+     * The tangent is determined for the vertex with index i0.
+     * The other vertices making up the triangle also have to be specified as index parameters.
+     * 
+     * @param i0 index of the vertex the tangent is assigned to
+     * @param i1 index of the next vertex in the triangle
+     * @param i2 index of the previous vertex in the triangle
+     * @return normalized tangent of the vertex with index i0
+     */
+    glm::vec3 getTangent(uint16_t i0, uint16_t i1, uint16_t i2);
 
     std::vector<Vertex> m_vertices; /**< List of vertices with required attributes */
     std::vector<uint16_t> m_indices; /**< List of indices assembling the vertices into triangles */

@@ -101,6 +101,7 @@ private:
      * @param text section of the file text containing only the vector data
      */
     static glm::vec3 textToVec3(std::string text);
+
 };
 
 #endif //SLBVULKAN_RESOURCELOADER_H

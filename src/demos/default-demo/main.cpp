@@ -46,17 +46,18 @@ int main() {
         glm::vec3(-0.5f, 0.0f, 1.3f),
         glm::vec3(2.0f, 0.5f, 0.0f)
     };
-    std::vector<glm::vec3> lightColors = {
-        glm::vec3(1.0f, 1.0f, 1.0f),
-        glm::vec3(0.4f, 0.78f, 1.0f),
-        glm::vec3(1.0f, 0.63f, 0.3f)
+    std::vector<glm::vec4> lightColors = {
+        glm::vec4(1.0f, 1.0f, 1.0f, 0.7f),
+        glm::vec4(0.4f, 0.78f, 1.0f, 0.3f),
+        glm::vec4(1.0f, 0.63f, 0.3f, 0.5f)
     };
     auto lightsNode = std::make_unique<SceneNode>();
     for(int l=0; l<3; l++) {
         auto sceneNode = std::make_unique<SceneNode>();
         auto light = std::make_unique<Light>(lightPositions[l], glm::normalize(-lightPositions[l]));
         light->setRange(3.0f);
-        light->setColor(lightColors[l]);
+        light->setColor(glm::vec3(lightColors[l]));
+        light->setIntensity(lightColors[l].w);
         sceneNode->addLight(light);
         lightsNode->addChild(sceneNode);
     }

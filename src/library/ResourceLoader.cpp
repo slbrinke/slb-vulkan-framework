@@ -265,12 +265,12 @@ void ResourceLoader::loadModel(const std::string &fileName, std::unique_ptr<Scen
 
                 indexStart = 0;
                 indexEnd = indices.find('/', indexStart);
-                auto posIndex = std::stof(indices.substr(indexStart, indexEnd-indexStart)) - 1;
+                auto posIndex = static_cast<uint32_t>(std::stoul(indices.substr(indexStart, indexEnd-indexStart)) - 1);
                 indexStart = indexEnd+1;
                 indexEnd = indices.find('/', indexStart);
-                auto texCoordIndex = std::stof(indices.substr(indexStart, indexEnd-indexStart)) - 1;
+                auto texCoordIndex = static_cast<uint32_t>(std::stoul(indices.substr(indexStart, indexEnd-indexStart)) - 1);
                 indexStart = indexEnd+1;
-                auto normalIndex = std::stof(indices.substr(indexStart, indices.length()-indexStart)) - 1;
+                auto normalIndex = static_cast<uint32_t>(std::stoul(indices.substr(indexStart, indices.length()-indexStart)) - 1);
                 meshes.back()->addVertex(
                     loadedPositions[posIndex],
                     loadedNormals[normalIndex],
@@ -285,7 +285,6 @@ void ResourceLoader::loadModel(const std::string &fileName, std::unique_ptr<Scen
                 meshes.back()->addIndex(vertexOffset);
                 meshes.back()->addIndex(vertexOffset + 1);
                 meshes.back()->addIndex(vertexOffset + 2);
-                vertexOffset += 3;
             } else if(numVertsPerFace == 4) {
                 meshes.back()->addIndex(vertexOffset);
                 meshes.back()->addIndex(vertexOffset + 1);
@@ -293,8 +292,9 @@ void ResourceLoader::loadModel(const std::string &fileName, std::unique_ptr<Scen
                 meshes.back()->addIndex(vertexOffset + 2);
                 meshes.back()->addIndex(vertexOffset + 3);
                 meshes.back()->addIndex(vertexOffset);
-                vertexOffset += 4;
             }
+            
+            vertexOffset += numVertsPerFace;
         }
     }
     objFile.close();

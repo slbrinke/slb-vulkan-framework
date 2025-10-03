@@ -12,8 +12,8 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
     }
 }
 
-int screenWidth = 700;
-int screenHeight = 500;
+int screenWidth = 1000;
+int screenHeight = 700;
 
 std::shared_ptr<Context> context = nullptr;
 std::shared_ptr<Camera> camera = nullptr;
@@ -24,20 +24,13 @@ int main() {
     glfwSetKeyCallback(context->getWindow().get(), keyCallback);
 
     camera = std::make_shared<Camera>(screenWidth, screenHeight, context->getWindow());
-    camera->setPosition(glm::vec3(0.0f, 0.3f, 0.0f));
+    //camera->setPosition(glm::vec3(0.0f, 0.3f, 0.0f));
 
     scene = std::make_shared<Scene>();
 
     auto modelNode = std::make_unique<SceneNode>();
-    ResourceLoader::loadModel("bottle", modelNode);
-    modelNode->getChildren().back().get()->setPosition(glm::vec3(0.01f, 0.0f, -0.15f));
-    modelNode->getChildren().back().get()->scale(0.1f);
-    ResourceLoader::loadModel("teapot", modelNode);
-    modelNode->getChildren().back().get()->setPosition(glm::vec3(0.23f, 0.0f, 0.3f));
-    modelNode->getChildren().back().get()->rotate(190.0f, glm::vec3(0.0f, 1.0f, 0.0f));
-    modelNode->getChildren().back().get()->scale(0.1f);
-    ResourceLoader::loadModel("pink_crystal", modelNode);
-    modelNode->getChildren().back().get()->scale(0.1f);
+    ResourceLoader::loadModel("watering_can_metal_01_4k", modelNode);
+    //modelNode->getChildren().back().get()->scale(0.1f);
     scene->addSceneNode(modelNode);
     scene->addSun(30.0f, 50.0f, glm::vec3(0.85f, 0.67f, 0.29f), 1.0f);
 

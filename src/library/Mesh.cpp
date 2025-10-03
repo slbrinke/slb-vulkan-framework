@@ -17,7 +17,7 @@ void Mesh::addVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texCoord, g
     });
 }
 
-void Mesh::addIndex(uint16_t index) {
+void Mesh::addIndex(uint32_t index) {
     m_indices.emplace_back(index);
 }
 
@@ -155,7 +155,7 @@ void Mesh::addCone(glm::vec3 base, float radius, float height, int resolution) {
 
 void Mesh::calculateTangents() {
     for(size_t i=0; i<m_indices.size()/3; i++) {
-        std::array<uint16_t,3> triIndices = {
+        std::array<uint32_t,3> triIndices = {
             m_indices[3*i],
             m_indices[3*i+1],
             m_indices[3*i+2]
@@ -170,7 +170,7 @@ void Mesh::calculateTangents() {
     }
 }
 
-glm::vec3 Mesh::getTangent(uint16_t i0, uint16_t i1, uint16_t i2) {
+glm::vec3 Mesh::getTangent(uint32_t i0, uint32_t i1, uint32_t i2) {
     float u1 = m_vertices[i1].texCoord.x - m_vertices[i0].texCoord.x;
     float u2 = m_vertices[i2].texCoord.x - m_vertices[i0].texCoord.x;
     float v1 = m_vertices[i1].texCoord.y - m_vertices[i0].texCoord.y;
@@ -210,7 +210,7 @@ void Mesh::createBuffers(std::shared_ptr<Context> &context) {
     vkFreeMemory(context->getDevice(), stagingBufferMemory, nullptr);
 
     //fill staging buffer with index data
-    auto indexSize = static_cast<VkDeviceSize>(m_indices.size() * sizeof(uint16_t));
+    auto indexSize = static_cast<VkDeviceSize>(m_indices.size() * sizeof(uint32_t));
     context->createBuffer(indexSize, VK_BUFFER_USAGE_TRANSFER_SRC_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, stagingBuffer, stagingBufferMemory);
     vkMapMemory(context->getDevice(), stagingBufferMemory, 0, indexSize, 0, &data);
     memcpy(data, m_indices.data(), (size_t) indexSize);
@@ -229,7 +229,7 @@ void Mesh::render(VkCommandBuffer commandBuffer, uint32_t numInstances) {
     VkDeviceSize offsets[] = {0};
     VkBuffer vertexBuffers[] = {m_vertexBuffer};
     vkCmdBindVertexBuffers(commandBuffer, 0, 1, vertexBuffers, offsets);
-    vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+    vkCmdBindIndexBuffer(commandBuffer, m_indexBuffer, 0, VK_INDEX_TYPE_UINT32);
     vkCmdDrawIndexed(commandBuffer, m_indices.size(), numInstances, 0, 0, 0);
 }
 

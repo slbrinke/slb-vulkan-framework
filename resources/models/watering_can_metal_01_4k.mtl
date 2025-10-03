@@ -1,0 +1,14 @@
+# Blender 3.6.2 MTL File: 'watering_can_metal_01_4k.blend'
+# www.blender.org
+
+newmtl watering_can_metal_01
+Ka 1.000000 1.000000 1.000000
+Ks 0.000000 0.000000 0.000000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 1
+map_Kd C:/watering_can_metal_01_diff_4k.jpg
+map_Ns C:/watering_can_metal_01_rough_4k.hdr
+map_refl C:/watering_can_metal_01_metal_4k.hdr
+map_Bump -bm 1.000000 C:/watering_can_metal_01_nor_gl_4k.hdr

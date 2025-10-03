@@ -83,7 +83,7 @@ public:
      * 
      * @param index index of a vertex in the vertex buffer
      */
-    void addIndex(uint16_t index);
+    void addIndex(uint32_t index);
 
     /**
      * Add a sphere to the geometry.
@@ -156,10 +156,10 @@ private:
      * @param i2 index of the previous vertex in the triangle
      * @return normalized tangent of the vertex with index i0
      */
-    glm::vec3 getTangent(uint16_t i0, uint16_t i1, uint16_t i2);
+    glm::vec3 getTangent(uint32_t i0, uint32_t i1, uint32_t i2);
 
     std::vector<Vertex> m_vertices; /**< List of vertices with required attributes */
-    std::vector<uint16_t> m_indices; /**< List of indices assembling the vertices into triangles */
+    std::vector<uint32_t> m_indices; /**< List of indices assembling the vertices into triangles */
 
     bool m_hasBuffers = false; /**< Status of the buffers required for rendering */
 

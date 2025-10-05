@@ -37,10 +37,10 @@ Scene::Scene() {
     m_defaultMeshes[0]->addIndex(0);
     //point light sphere
     m_defaultMeshes.emplace_back(std::make_shared<Mesh>());
-    m_defaultMeshes[1]->addSphere(glm::vec3(0.0f), 1.0f, 10);
+    m_defaultMeshes[1]->addSphere(glm::vec3(0.0f), 1.0f, 30);
     //spot light cone
     m_defaultMeshes.emplace_back(std::make_shared<Mesh>());
-    m_defaultMeshes[2]->addCone(glm::vec3(0.0f, -1.0f, 0.0f), 1.0f, 1.0f, 10);
+    m_defaultMeshes[2]->addCone(glm::vec3(0.0f, -1.0f, 0.0f), 1.0f, 1.0f, 30);
     
 }
 
@@ -57,6 +57,11 @@ void Scene::addSceneNode(std::unique_ptr<SceneNode> &sceneNode) {
     m_rootNode->addChild(sceneNode);
 }
 
+void Scene::addEnvironmentMap(std::string fileName) {
+    m_envMapFile = fileName;
+    m_hasEnvMap = true;
+}
+
 void Scene::addSun(float theta, float phi, glm::vec3 color, float intensity) {
     auto sunDirection = glm::vec3(
         glm::sin(glm::radians(phi)) * glm::cos(glm::radians(theta)),
@@ -71,6 +76,11 @@ void Scene::addSun(float theta, float phi, glm::vec3 color, float intensity) {
 }
 
 void Scene::init(std::shared_ptr<Context> &context, std::vector<DescriptorSet> &descriptorSets) {
+    if(m_hasEnvMap) {
+        m_textures.emplace_back(context, m_envMapFile);
+        m_numTextures++;
+    }
+
     initSceneNode(context, m_rootNode);
 
     descriptorSets[1].addBuffer("Materials", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_numMaterials * sizeof(MaterialUniforms), false, nullptr);
@@ -158,6 +168,10 @@ void Scene::renderMeshes(VkCommandBuffer commandBuffer, VkPipelineLayout pipelin
 
 void Scene::renderScreenQuad(VkCommandBuffer commandBuffer) {
     m_defaultMeshes[0]->render(commandBuffer, 1);
+}
+
+void Scene::renderEnvironmentMap(VkCommandBuffer commandBuffer) {
+    m_defaultMeshes[1]->render(commandBuffer, 1);
 }
 
 void Scene::renderLightProxies(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout) {

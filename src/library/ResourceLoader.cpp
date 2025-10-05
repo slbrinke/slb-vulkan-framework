@@ -51,7 +51,7 @@ uint32_t ResourceLoader::getDescriptorSetIndex(std::string descriptorName) {
         || descriptorName == "Textures" || descriptorName == "SceneNodeConstants") {
         return 1;
 
-    } else if(descriptorName == "GBuffer") {
+    } else if(descriptorName == "GBuffer" || descriptorName == "ShadingResult") {
         return 2;
 
     }
@@ -177,6 +177,8 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         + "layout(input_attachment_index = 1, set = " + std::to_string(setIndex) + ", binding = 1) uniform subpassInputMS gBufferMaterials1;\n"
         + "layout(input_attachment_index = 2, set = " + std::to_string(setIndex) + ", binding = 2) uniform subpassInputMS gBufferMaterials2;\n"
         + "layout(input_attachment_index = 3, set = " + std::to_string(setIndex) + ", binding = 3) uniform subpassInputMS gBufferDepth;\n\n";
+    } else if(descriptorName == "ShadingResult") {
+        return "layout(input_attachment_index = 0, set = " + std::to_string(setIndex) + ", binding = 0) uniform subpassInputMS shadingResult;\n\n";
     }
 
     throw std::runtime_error("RESOURCE LOADER ERROR: There is no descriptor with name " + descriptorName);
@@ -196,6 +198,9 @@ void ResourceLoader::loadModel(const std::string &fileName, std::unique_ptr<Scen
     mtlFile.seekg(0);
     std::string line;
     while(std::getline(mtlFile, line)) {
+        if(!line.empty() && line[line.size() - 1] == '\r') {
+            line.erase(line.size() - 1);
+        }
         if(line.substr(0, 6) == "newmtl") {
             materials.emplace_back(std::make_shared<Material>());
             materials.back()->setName(line.substr(7));
@@ -216,9 +221,15 @@ void ResourceLoader::loadModel(const std::string &fileName, std::unique_ptr<Scen
         } else if(line.substr(0, 6) == "map_Ns") {
             startPos = line.find_last_of('/');
             materials.back()->setRoughnessTexture(line.substr(startPos+1));
+
+        } else if(line.substr(0, 8) == "map_refl") {
+            startPos = line.find_last_of('/');
+            materials.back()->setMetallicTexture(line.substr(startPos+1));
+
         } else if(line.substr(0, 8) == "map_Bump") {
             startPos = line.find_last_of('/');
             materials.back()->setNormalTexture(line.substr(startPos+1));
+            
         }
     }
     mtlFile.close();

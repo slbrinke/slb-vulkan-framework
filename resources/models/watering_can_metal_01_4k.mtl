@@ -9,6 +9,6 @@ Ni 1.450000
 d 1.000000
 illum 1
 map_Kd C:/watering_can_metal_01_diff_4k.jpg
-map_Ns C:/watering_can_metal_01_rough_4k.hdr
-map_refl C:/watering_can_metal_01_metal_4k.hdr
-map_Bump -bm 1.000000 C:/watering_can_metal_01_nor_gl_4k.hdr
+map_Ns C:/watering_can_metal_01_rough_4k.jpg
+map_refl C:/watering_can_metal_01_metal_4k.jpg
+map_Bump -bm 1.000000 C:/watering_can_metal_01_nor_gl_4k.jpg

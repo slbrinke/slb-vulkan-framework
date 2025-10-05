@@ -1,0 +1,13 @@
+# Blender 3.6.2 MTL File: 'compost_bags_4k.blend'
+# www.blender.org
+
+newmtl compost_bags
+Ka 1.000000 1.000000 1.000000
+Ks 0.500000 0.500000 0.500000
+Ke 0.000000 0.000000 0.000000
+Ni 1.450000
+d 1.000000
+illum 2
+map_Kd C:/compost_bags_diff_4k.jpg
+map_Ns C:/compost_bags_rough_4k.jpg
+map_Bump -bm 1.000000 C:/compost_bags_nor_gl_4k.jpg

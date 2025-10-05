@@ -46,6 +46,8 @@ public:
      */
     void addSceneNode(std::unique_ptr<SceneNode> &sceneNode);
 
+    void addEnvironmentMap(std::string fileName);
+
     /**
      * Add the sun as a default light source.
      * 
@@ -96,6 +98,8 @@ public:
      */
     void renderScreenQuad(VkCommandBuffer commandBuffer);
 
+    void renderEnvironmentMap(VkCommandBuffer commandBuffer);
+
     /**
      * Record draw calls for the proxy geometry of each light source in the scene graph.
      * 
@@ -132,6 +136,9 @@ private:
     std::vector<MaterialUniforms> m_materialUniforms; /**< Uniform data for all materials in the scene */
     uint32_t m_numTextures = 0; /**< Number of textures attached to the materials */
     std::vector<Image> m_textures; /**< Texture images required by the materials */
+
+    bool m_hasEnvMap = false;
+    std::string m_envMapFile = "";
 
     uint32_t m_numLights = 0; /**< Number of light sources in the scene graph */
     std::vector<LightUniforms> m_lightUniforms; /**< Uniform data for all lights in the scene */

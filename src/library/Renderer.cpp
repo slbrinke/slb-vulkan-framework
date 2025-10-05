@@ -336,10 +336,18 @@ void Renderer::recordGraphicsCommandBuffer() {
         }
 
         renderStep.start(commandBuffer, frameIndex);
-        if(renderStep.getRenderMode() == renderMeshes) {
-            m_scene->renderMeshes(commandBuffer, renderStep.getPipelineLayout(), renderStep.getRenderSize());
-        } else if(renderStep.getRenderMode() == renderLightProxies) {
-            m_scene->renderLightProxies(commandBuffer, renderStep.getPipelineLayout());
+        switch(renderStep.getRenderMode()) {
+            case renderMeshes:
+                m_scene->renderMeshes(commandBuffer, renderStep.getPipelineLayout(), renderStep.getRenderSize());
+                break;
+            case renderLightProxies:
+                m_scene->renderLightProxies(commandBuffer, renderStep.getPipelineLayout());
+                break;
+            case renderEnvMap:
+                m_scene->renderEnvironmentMap(commandBuffer);
+                break;
+            default:
+                break;
         }
         renderStep.end(commandBuffer);
     }

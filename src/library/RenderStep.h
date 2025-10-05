@@ -13,6 +13,7 @@
 enum RenderMode {
     renderMeshes, /**< Instanced render call for each mesh in the scene */
     renderLightProxies, /**< Deferred rendering of proxy geometry for each light source in the scene */
+    renderEnvMap
 };
 
 /**

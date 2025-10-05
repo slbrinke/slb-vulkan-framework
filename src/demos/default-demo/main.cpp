@@ -24,15 +24,25 @@ int main() {
     glfwSetKeyCallback(context->getWindow().get(), keyCallback);
 
     camera = std::make_shared<Camera>(screenWidth, screenHeight, context->getWindow());
-    //camera->setPosition(glm::vec3(0.0f, 0.3f, 0.0f));
+    camera->setPosition(glm::vec3(0.0f, 0.1f, 0.0f));
 
     scene = std::make_shared<Scene>();
+    scene->addEnvironmentMap("sunflowers_puresky_4k.hdr");
+    //scene->addSun(30.0f, 50.0f, glm::vec3(0.85f, 0.67f, 0.29f), 1.0f);
+    scene->addSun(44.0f, 215.0f, glm::vec3(1.0f), 3.0f);
 
     auto modelNode = std::make_unique<SceneNode>();
+    auto compostBagsNode = std::make_unique<SceneNode>();
+    ResourceLoader::loadModel("compost_bags_4k", compostBagsNode);
+    compostBagsNode->scale(0.5f);
+    modelNode->addChild(compostBagsNode);
     ResourceLoader::loadModel("watering_can_metal_01_4k", modelNode);
-    //modelNode->getChildren().back().get()->scale(0.1f);
+    modelNode->getChildren().back()->setPosition(glm::vec3(0.1f, 0.0f, 0.3f));
+    modelNode->getChildren().back()->rotate(315.0f, glm::vec3(0.0f, 1.0f, 0.0f));
+    ResourceLoader::loadModel("trowel_01_4k", modelNode);
+    modelNode->getChildren().back()->setPosition(glm::vec3(-0.1f, 0.0f, 0.35f));
+    modelNode->getChildren().back()->rotate(50.0f, glm::vec3(0.0f, 1.0f, 0.0f));
     scene->addSceneNode(modelNode);
-    scene->addSun(30.0f, 50.0f, glm::vec3(0.85f, 0.67f, 0.29f), 1.0f);
 
     std::vector<glm::vec3> lightPositions = {
         glm::vec3(0.0f, 0.0f, -0.75f),

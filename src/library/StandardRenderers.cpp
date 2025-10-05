@@ -48,11 +48,15 @@ void DeferredRenderer::setUpRenderOutput() {
     m_renderOutput.back().addDepthAttachment(m_depthFormat, 1.0f, false);
     //main shading
     m_renderOutput.back().addSubPass(true);
-    m_renderOutput.back().addSwapChainAttachment(m_swapChain, m_swapChainFormat, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f));
+    m_renderOutput.back().addColorAttachment(VK_FORMAT_R16G16B16A16_UNORM, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f), false);
     m_renderOutput.back().addSubPassInput(0, 0);
     m_renderOutput.back().addSubPassInput(0, 1);
     m_renderOutput.back().addSubPassInput(0, 2);
     m_renderOutput.back().addSubPassInput(0, 3);
+    //final composition/post processing
+    m_renderOutput.back().addSubPass(true);
+    m_renderOutput.back().addSwapChainAttachment(m_swapChain, m_swapChainFormat, glm::vec4(0.0f, 0.0f, 0.0f, 0.0f));
+    m_renderOutput.back().addSubPassInput(1, 0);
 
     for(uint32_t o=0; o<m_renderOutput.size(); o++) {
         m_renderOutput[o].init(o);
@@ -77,4 +81,12 @@ void DeferredRenderer::setUpRenderSteps() {
     m_renderSteps.back().setCullMode(VK_CULL_MODE_FRONT_BIT);
     m_renderSteps.back().enableBlending();
     m_renderSteps.back().initRenderStep(m_renderOutput[0], 1);
+
+    m_renderSteps.emplace_back(m_context, m_numSwapChainImages);
+    m_renderSteps.back().setName("Final Composition");
+    m_renderSteps.back().createShaderModules(
+        {"deferred/finalComposition.vert", "deferred/finalComposition.frag"},
+        m_descriptorSets, sceneCounts);
+    m_renderSteps.back().setRenderMode(renderEnvMap);
+    m_renderSteps.back().initRenderStep(m_renderOutput[0], 2);
 }

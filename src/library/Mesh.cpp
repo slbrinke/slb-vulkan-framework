@@ -8,6 +8,10 @@ bool Mesh::hasBuffers() {
     return m_hasBuffers;
 }
 
+float Mesh::getMaxRadius() {
+    return glm::sqrt(m_maxSquaredRadius);
+}
+
 void Mesh::addVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texCoord, glm::vec3 tangent) {
     m_vertices.emplace_back(Vertex{
         glm::vec4(position, 1.0f),
@@ -15,6 +19,8 @@ void Mesh::addVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texCoord, g
         texCoord,
         glm::normalize(tangent)
     });
+
+    m_maxSquaredRadius = glm::max(m_maxSquaredRadius, position.x*position.x + position.y*position.y + position.z*position.z);
 }
 
 void Mesh::addIndex(uint32_t index) {

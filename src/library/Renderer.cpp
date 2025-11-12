@@ -1,7 +1,7 @@
 #include "Renderer.h"
 
-Renderer::Renderer(std::shared_ptr<Context> &context, std::shared_ptr<Camera> &camera, std::shared_ptr<Scene> &scene)
-: m_context(context), m_camera(camera), m_scene(scene) {
+Renderer::Renderer(std::shared_ptr<Context> &context, std::shared_ptr<Scene> &scene)
+: m_context(context), m_scene(scene) {
     createSwapChain();
 
     m_depthFormat = m_context->findSupportedFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT}, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
@@ -161,19 +161,11 @@ void Renderer::update() {
     uint32_t frameIndex = m_currentFrame % m_numSwapChainImages;
 
     //update uniforms
-    CameraUniforms camUniforms{
-        m_camera->getViewMatrix(),
-        m_camera->getProjectionMatrix(),
-        static_cast<float>(m_imageExtent.width),
-        static_cast<float>(m_imageExtent.height),
-        0.0f, 0.0f
-    };
-    m_descriptorSets[0].updateBuffer("Camera", frameIndex, &camUniforms);
     RendererUniforms rendererUniforms {
         glm::pi<float>(),
         1.0f / glm::pi<float>(),
         0.001f,
-        0.0f
+        m_shadowMapSize
     };
     m_descriptorSets[0].updateBuffer("Renderer", frameIndex, &rendererUniforms);
 

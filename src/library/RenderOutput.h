@@ -89,6 +89,8 @@ public:
      */
     bool subPassUsesMultisampling(uint32_t subPassIndex);
 
+    VkImageView getSubPassAttachment(uint32_t subPassIndex, uint32_t attachmentIndex);
+
     /**
      * Check whether there are inputs defined for a specific subpass.
      * 

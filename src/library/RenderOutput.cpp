@@ -42,6 +42,17 @@ bool RenderOutput::subPassUsesMultisampling(uint32_t subPassIndex) {
     throw std::runtime_error("RENDER OUTPUT ERROR: There is no subpass with index " + subPassIndex);
 }
 
+VkImageView RenderOutput::getSubPassAttachment(uint32_t subPassIndex, uint32_t attachmentIndex) {
+    auto &attachment = m_attachments[m_subPasses[subPassIndex].firstAttachment + attachmentIndex];
+    if(attachment.useMultisampling) {
+        if(!attachment.hasResolve) {
+            throw std::runtime_error("RENDER OUTPUT ERROR: Attachment " + std::to_string(attachmentIndex) + " in subpass " + std::to_string(subPassIndex) + " has no resolve image. It cannot be used outside of the renderpass.");
+        }
+        return m_images[attachment.resolveIndex].getView();
+    }
+    return m_images[attachment.mainIndex].getView();
+}
+
 bool RenderOutput::subPassHasInputs(uint32_t subPassIndex) {
     if(subPassIndex < m_numSubPasses) {
         return !m_subPasses[subPassIndex].subPassInputs.empty() || !m_subPasses[subPassIndex].externalInputs.empty();

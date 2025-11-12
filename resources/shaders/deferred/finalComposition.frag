@@ -7,6 +7,26 @@ layout(location = 0) in vec2 passTexCoord;
 
 layout(location = 0) out vec4 fragmentColor;
 
+vec3 convertSRGBToLinear(vec3 srgb) {
+    vec3 linear = vec3(0.0, 0.0, 0.0);
+    if(srgb.x <= 0.04045) {
+        linear.x = srgb.x / 12.92;
+    } else {
+        linear.x = pow((srgb.x + 0.055) / 1.055, 2.4);
+    }
+    if(srgb.y <= 0.04045) {
+        linear.y = srgb.y / 12.92;
+    } else {
+        linear.y = pow((srgb.y + 0.055) / 1.055, 2.4);
+    }
+    if(srgb.z <= 0.04045) {
+        linear.z = srgb.z / 12.92;
+    } else {
+        linear.z = pow((srgb.z + 0.055) / 1.055, 2.4);
+    }
+    return linear;
+}
+
 void main() {
     vec3 final = vec3(0.0, 0.0, 0.0);
 
@@ -17,6 +37,6 @@ void main() {
         final = vec3(texture(materialTextures[0], passTexCoord));
     }
 
-    fragmentColor = vec4(final, 1.0);
+    fragmentColor = vec4(convertSRGBToLinear(final), 1.0);
 
 }

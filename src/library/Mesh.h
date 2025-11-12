@@ -64,6 +64,8 @@ public:
      */
     bool hasBuffers();
 
+    float getMaxRadius();
+
     /**
      * Add a vertex in local coordinates to the vertex list.
      * 
@@ -168,6 +170,8 @@ private:
 
     VkBuffer m_indexBuffer = VK_NULL_HANDLE; /**< Vulkan handle of the index buffer */
     VkDeviceMemory m_indexMemory = VK_NULL_HANDLE; /**< Memory containing the index data */
+
+    float m_maxSquaredRadius = 0.0f;
 
 };
 

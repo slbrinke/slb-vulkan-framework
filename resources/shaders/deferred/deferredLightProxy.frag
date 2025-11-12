@@ -20,8 +20,6 @@ bool reconstructPosition(out vec3 positionCamera) {
     }
 
     vec2 screenPos = 2.0 * vec2(gl_FragCoord.x / camera.screenWidth, gl_FragCoord.y / camera.screenHeight) - vec2(1.0);
-    //positionCamera.z = camera.projection[3][2] / (depth * camera.projection[2][3] - camera.projection[2][2]);
-    //float w = camera.projection[2][3] * positionCamera.z;
     positionCamera.z = (depth * camera.projection[3][3] - camera.projection[3][2])
         / (camera.projection[2][2] - depth * camera.projection[2][3]);
     float w = camera.projection[2][3] * positionCamera.z + camera.projection[3][3];
@@ -55,6 +53,31 @@ vec3 getLightAttenuation(vec3 positionCamera, out vec3 lightVector) {
     return intensity * light.color;
 }
 
+float getShadowFactor(vec3 positionCamera, float nl, int window) {
+    float shadowFactor = 1.0;
+    float shadowDecrease = 1.0 / float((2*window+1) * (2*window+1));
+
+    float shadowLayer = floor(float(passLightIndex) + 0.5);
+    vec4 positionShadow = lights[passLightIndex].shadowProj * lights[passLightIndex].shadowView * inverse(camera.view) * vec4(positionCamera, 1.0);
+    float shadowX = 0.5 * (positionShadow.x / positionShadow.w) + 0.5;
+    float shadowY = 0.5 * (positionShadow.y / positionShadow.w) + 0.5;
+    float posDepth = positionShadow.z / positionShadow.w;
+
+    float step = 1.0 / float(renderer.shadowMapSize);
+    float bias = 0.0001 * tan(acos(1.0 - nl));
+
+    for(int x=-window; x<=window; x++) {
+        for(int y=-window; y<=window; y++) {
+            float shadowDepth = texture(shadowMaps, vec3(shadowX + float(x) * step, shadowY + float(y) * step, shadowLayer)).x;
+            if(shadowDepth < posDepth - bias) {
+                shadowFactor -= shadowDecrease;
+            }
+        }
+    }
+
+    return shadowFactor;
+}
+
 void main() {
     //retrieve depth and use as general stencil
     vec3 positionCamera;
@@ -68,7 +91,7 @@ void main() {
     normalCamera.x = 2.0 * normalData.x - 1.0;
     normalCamera.y = 2.0 * normalData.y - 1.0;
     normalCamera.z = 1.0 - normalCamera.x*normalCamera.x - normalCamera.y*normalCamera.y;
-    normalCamera = normalize(normalCamera);
+    normalCamera = normalCamera;
 
     //retrieve other brdf parameters
     vec4 matData1 = subpassLoad(gBufferMaterials1, gl_SampleID);
@@ -117,6 +140,8 @@ void main() {
 
         matFinal = nl * (matDiffuse + matSpecular + matSheen);
     }
+
+    matFinal *= getShadowFactor(positionCamera, nl, 1);
 
     fragmentColor = vec4(matFinal * lightColor, 1.0);
 }

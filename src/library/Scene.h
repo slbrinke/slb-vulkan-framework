@@ -1,6 +1,7 @@
 #ifndef SLBVULKAN_SCENE_H
 #define SLBVULKAN_SCENE_H
 
+#include "Camera.h"
 #include "ResourceLoader.h"
 #include "DescriptorSet.h"
 #include "Image.h"
@@ -18,8 +19,10 @@ public:
      * Create an empty scene.
      * 
      * Sets up default root node for the scene graph.
+     * 
+     * @param camera pointer to the camera the scene will be seen through
      */
-    Scene();
+    Scene(std::shared_ptr<Camera> &camera);
     ~Scene() = default;
 
     /**
@@ -46,6 +49,11 @@ public:
      */
     void addSceneNode(std::unique_ptr<SceneNode> &sceneNode);
 
+    /**
+     * Add an hdri image as environment map.
+     * 
+     * @param fileName name of an image file in the resources/textures folder
+     */
     void addEnvironmentMap(std::string fileName);
 
     /**
@@ -98,6 +106,13 @@ public:
      */
     void renderScreenQuad(VkCommandBuffer commandBuffer);
 
+    /**
+     * Record the draw command for the environment map.
+     * 
+     * The predetermined hdri image is displayed on a sphere enveloping the scene.
+     * 
+     * @param commandBuffer graphics command buffer receiving the draw command
+     */
     void renderEnvironmentMap(VkCommandBuffer commandBuffer);
 
     /**
@@ -128,6 +143,8 @@ private:
      */
     void initSceneNode(std::shared_ptr<Context> &context, std::unique_ptr<SceneNode> &sceneNode, glm::mat4 parentModel = glm::mat4(1.0f));
 
+    std::shared_ptr<Camera> m_camera; /**< Pointer to the camera viewing the scene */
+
     glm::vec3 m_backgroundColor{0.43f, 0.38f, 0.3f}; /**< Color displayed in the background of the scene */
 
     std::unique_ptr<SceneNode> m_rootNode; /**< Root node of the scene graph */
@@ -137,8 +154,8 @@ private:
     uint32_t m_numTextures = 0; /**< Number of textures attached to the materials */
     std::vector<Image> m_textures; /**< Texture images required by the materials */
 
-    bool m_hasEnvMap = false;
-    std::string m_envMapFile = "";
+    bool m_hasEnvMap = false; /**< Stores whether an environment map has been assigned */
+    std::string m_envMapFile = ""; /**< Name of the image file containing the hdri environment map */
 
     uint32_t m_numLights = 0; /**< Number of light sources in the scene graph */
     std::vector<LightUniforms> m_lightUniforms; /**< Uniform data for all lights in the scene */

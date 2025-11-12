@@ -36,8 +36,8 @@ struct CameraUniforms {
     glm::mat4 projectionMatrix; /**< Matrix converting camera coordinates to screen coordinates */
     float screenWidth; /**< Width of the rendered image in number of pixels */
     float screenHeight; /**< Height of the rendered image in number of pixels */
-    float pad1; /**< Padding for now */
-    float pad2; /**< Padding for now */
+    float nearDepth;
+    float farDepth;
 };
 
 /**
@@ -59,6 +59,18 @@ public:
     Camera(int width, int height, std::unique_ptr<GLFWwindow, DestroyGLFWwindow> &window);
 
     ~Camera() = default;
+
+    /**
+     * Returns the width of the window and rendered images.
+     * @return window width in number of pixels
+     */
+    int getScreenWidth();
+
+    /**
+     * Returns the height of the window and rendered images.
+     * @return window height in number of pixels
+     */
+    int getScreenHeight();
 
     /**
      * Returns the (full) vertical opening angle used for perspective projection.
@@ -89,6 +101,19 @@ public:
      * @return 4x4 projection matrix
      */
     glm::mat4 getProjectionMatrix();
+
+    /**
+     * Determines the shadow view and projection matrices for a given directional light source.
+     * 
+     * Fits the orthographic shadow map projection to a section of the view frustum.
+     * 
+     * @param lightDir direction of the light generating the shadow map
+     * @param zMin minimum distance of the frustum section from the camera position
+     * @param zMax maximum distance of the frustum section from the camera position
+     * @param[out] lightView view matrix converting world to local light coordiantes
+     * @param[out] lightProj projection matrix converting local light coordinates to shadow map coordinates
+     */
+    void getLightViewProj(glm::vec3 lightDir, float zMin, float zMax, glm::mat4 &lightView, glm::mat4 &lightProj);
 
     /**
      * Changes the position of the camera.
@@ -161,7 +186,9 @@ private:
     float m_mouseSensitivity = 3.0f; /**< Scale at which changes from mouse input affect the camera */
     float m_keySensitivity = 1.0f; /**< Scale at which changes from key input affect the camera */
 
-    float m_aspectRatio; /**< Width to height ratio of the rendered image. */
+    int m_screenWidth; /**< Width of the window and rendered images in number of pixels */
+    int m_screenHeight; /**< Height of the window and rendered images in number of pixels */
+    float m_aspectRatio; /**< Width to height ratio of the rendered images. */
     float m_fovy = glm::radians(60.0f); /**< Vertical opening angle of the camera in radians. */
     float m_near = 0.01f; /**< Closest distance to camera included in the view. */
     float m_far = 10.0f; /**< Farthest distance to camera included in the view. */

@@ -6,7 +6,6 @@
 #include <glm/glm.hpp>
 
 #include "Context.h"
-#include "Camera.h"
 #include "Scene.h"
 #include "RenderOutput.h"
 #include "RenderStep.h"
@@ -18,7 +17,7 @@ struct RendererUniforms {
     float pi; /**< The mathematical constant pi */
     float inversePi; /**< One divided by pi */
     float epsilon; /**< Very small value */
-    float pad; /**< Padding for now */
+    uint32_t shadowMapSize; /**< Padding for now */
 };
 
 /**
@@ -36,10 +35,9 @@ public:
      * Includes the creation of a swap chain that can be used in the output defined by the subclasses.
      * 
      * @param context pointer to the vulkan context
-     * @param camera pointer to the camera the scene will be seen through
      * @param scene pointer to the scene that will be visualized
      */
-    Renderer(std::shared_ptr<Context> &context, std::shared_ptr<Camera> &camera, std::shared_ptr<Scene> &scene);
+    Renderer(std::shared_ptr<Context> &context, std::shared_ptr<Scene> &scene);
     ~Renderer();
 
     /**
@@ -93,7 +91,6 @@ protected:
     void createSyncObjects();
 
     std::shared_ptr<Context> m_context; /**< Pointer to the vulkan context */
-    std::shared_ptr<Camera> m_camera; /**< Pointer to the camera viewing the scene */
     std::shared_ptr<Scene> m_scene; /**< Pointer to the rendered scene */
 
     VkExtent2D m_imageExtent{0, 0}; /**< Size of the screen in number of pixels */
@@ -108,6 +105,8 @@ protected:
     std::vector<DescriptorSet> m_descriptorSets; /**< List of descriptor sets added to render steps as requested in the shaders */
     std::vector<RenderOutput> m_renderOutput; /**< List of output image sets to render to */
     std::vector<RenderStep> m_renderSteps; /**< Individual rendering steps iterated for every frame */
+
+    uint32_t m_shadowMapSize = 1024; /**< Size of all generated shadow maps in number of pixels */
 
 private:
     /**

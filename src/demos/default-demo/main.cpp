@@ -26,10 +26,10 @@ int main() {
     camera = std::make_shared<Camera>(screenWidth, screenHeight, context->getWindow());
     camera->setPosition(glm::vec3(0.0f, 0.1f, 0.0f));
 
-    scene = std::make_shared<Scene>();
+    scene = std::make_shared<Scene>(camera);
     scene->addEnvironmentMap("sunflowers_puresky_4k.hdr");
     //scene->addSun(30.0f, 50.0f, glm::vec3(0.85f, 0.67f, 0.29f), 1.0f);
-    scene->addSun(44.0f, 215.0f, glm::vec3(1.0f), 3.0f);
+    scene->addSun(44.0f, 215.0f, glm::vec3(1.0f), 5.0f);
 
     auto modelNode = std::make_unique<SceneNode>();
     auto compostBagsNode = std::make_unique<SceneNode>();
@@ -40,7 +40,8 @@ int main() {
     modelNode->getChildren().back()->setPosition(glm::vec3(0.1f, 0.0f, 0.3f));
     modelNode->getChildren().back()->rotate(315.0f, glm::vec3(0.0f, 1.0f, 0.0f));
     ResourceLoader::loadModel("trowel_01_4k", modelNode);
-    modelNode->getChildren().back()->setPosition(glm::vec3(-0.1f, 0.0f, 0.35f));
+    modelNode->getChildren().back()->setPosition(glm::vec3(-0.1f, 0.03f, 0.35f));
+    modelNode->getChildren().back()->rotate(23.0f, glm::vec3(-1.0f, 0.0f, 0.0f));
     modelNode->getChildren().back()->rotate(50.0f, glm::vec3(0.0f, 1.0f, 0.0f));
     scene->addSceneNode(modelNode);
 
@@ -50,14 +51,14 @@ int main() {
         glm::vec3(2.0f, 0.5f, 0.0f)
     };
     std::vector<glm::vec4> lightColors = {
-        glm::vec4(1.0f, 1.0f, 1.0f, 0.7f),
-        glm::vec4(0.4f, 0.78f, 1.0f, 0.3f),
-        glm::vec4(1.0f, 0.63f, 0.3f, 0.5f)
+        glm::vec4(1.0f, 1.0f, 1.0f, 3.0f),
+        glm::vec4(0.4f, 0.78f, 1.0f, 1.0f),
+        glm::vec4(1.0f, 0.63f, 0.3f, 5.0f)
     };
     auto lightsNode = std::make_unique<SceneNode>();
     for(int l=0; l<3; l++) {
         auto sceneNode = std::make_unique<SceneNode>();
-        auto light = std::make_unique<Light>(lightPositions[l], glm::normalize(-lightPositions[l]));
+        auto light = std::make_unique<Light>(lightPositions[l], -lightPositions[l]);
         light->setRange(3.0f);
         light->setColor(glm::vec3(lightColors[l]));
         light->setIntensity(lightColors[l].w);
@@ -66,7 +67,7 @@ int main() {
     }
     scene->addSceneNode(lightsNode);
 
-    DeferredRenderer renderer(context, camera, scene);
+    DeferredRenderer renderer(context, scene);
 
     while(!glfwWindowShouldClose(context->getWindow().get())) {
         glfwPollEvents();

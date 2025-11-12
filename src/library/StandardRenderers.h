@@ -10,7 +10,7 @@
  */
 class ForwardRenderer : public Renderer {
 public:
-    ForwardRenderer(std::shared_ptr<Context> &context, std::shared_ptr<Camera> &camera, std::shared_ptr<Scene> &scene);
+    ForwardRenderer(std::shared_ptr<Context> &context, std::shared_ptr<Scene> &scene);
     ~ForwardRenderer() = default;
 
 private:
@@ -25,7 +25,7 @@ private:
  */
 class DeferredRenderer : public Renderer {
 public:
-    DeferredRenderer(std::shared_ptr<Context> &context, std::shared_ptr<Camera> &camera, std::shared_ptr<Scene> &scene);
+    DeferredRenderer(std::shared_ptr<Context> &context, std::shared_ptr<Scene> &scene);
     ~DeferredRenderer() = default;
 
 private:

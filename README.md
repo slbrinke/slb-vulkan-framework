@@ -10,4 +10,4 @@ A simple forward renderer or a deferred renderer can be used to visualize the sc
 The shaders implement physically-based shading based on:
 Burley, Brent, and Walt Disney Animation Studios. "Physically-based shading at disney." Acm siggraph. Vol. 2012. No. 2012.
 
-The assets displayed in the default scene are by James Ray Cock, Charles Nderitu, and Satyaki Mandal, Jarod Guest, and Sergej Majboroda on Polyhaven.
+The assets displayed in the default scene are by James Ray Cock, Charles Nderitu, Satyaki Mandal, Jarod Guest, and Sergej Majboroda on Polyhaven.

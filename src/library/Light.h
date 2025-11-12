@@ -19,6 +19,8 @@ struct LightUniforms {
     float cosSpotAngle;
     glm::vec3 color;
     float intensity;
+    glm::mat4 shadowView;
+    glm::mat4 shadowProj;
 };
 
 /**

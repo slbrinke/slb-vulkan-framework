@@ -15,13 +15,21 @@ uint32_t Light::getIndex() {
 LightUniforms Light::getUniformData(glm::mat4 model) {
     auto posWorld = glm::vec3(model * glm::vec4(m_position, 1.0f));
     auto dirWorld = glm::normalize(glm::vec3(model * glm::vec4(m_direction, 0.0f)));
+
+    glm::vec3 lightUp = 1.0f - glm::abs(dirWorld.y) < 0.001f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+    glm::mat4 shadowView = glm::lookAt(posWorld, posWorld + dirWorld, lightUp);
+    glm::mat4 shadowProj = glm::perspective(glm::radians(m_spotAngle), 1.0f, 0.05f * m_range, m_range);
+    shadowProj[1][1] *= -1.0f;
+    
     LightUniforms lightUniforms {
         posWorld,
         m_range,
         dirWorld,
         glm::cos(glm::radians(0.5f * m_spotAngle)),
         m_color,
-        m_intensity
+        m_intensity,
+        shadowView,
+        shadowProj
     };
     return lightUniforms;
 }

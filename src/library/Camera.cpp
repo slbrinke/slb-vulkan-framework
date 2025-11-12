@@ -1,7 +1,8 @@
 #include "Camera.h"
 
-Camera::Camera(int width, int height, std::unique_ptr<GLFWwindow, DestroyGLFWwindow> &window) {
-    m_aspectRatio = static_cast<float>(width) / static_cast<float>(height);
+Camera::Camera(int width, int height, std::unique_ptr<GLFWwindow, DestroyGLFWwindow> &window)
+: m_screenWidth(width), m_screenHeight(height) {
+    m_aspectRatio = static_cast<float>(m_screenWidth) / static_cast<float>(m_screenHeight);
 
     m_currentTime = glfwGetTime();
     m_oldTime = m_currentTime;
@@ -9,6 +10,14 @@ Camera::Camera(int width, int height, std::unique_ptr<GLFWwindow, DestroyGLFWwin
     glfwGetCursorPos(window.get(), &m_currentCursorX, &m_currentCursorY);
     m_oldCursorX = m_currentCursorX;
     m_oldCursorY = m_currentCursorY;
+}
+
+int Camera::getScreenWidth() {
+    return m_screenWidth;
+}
+
+int Camera::getScreenHeight() {
+    return m_screenHeight;
 }
 
 float Camera::getFieldOfView() {
@@ -38,7 +47,6 @@ glm::mat4 Camera::getProjectionMatrix() {
     } else {
         float screenHeight = 0.5f * m_radius;
         float screenWidth = m_aspectRatio * screenHeight;
-        //projection = glm::ortho(-screenWidth, screenWidth, -screenHeight, screenHeight, m_near, m_far);
         projection = glm::transpose(glm::mat4(
             1.0f / screenWidth, 0.0f, 0.0f, 0.0f,
             0.0f, 1.0f / screenHeight, 0.0f, 0.0f,
@@ -48,6 +56,57 @@ glm::mat4 Camera::getProjectionMatrix() {
     }
     projection[1][1] *= -1.0f;
     return projection;
+}
+
+void Camera::getLightViewProj(glm::vec3 lightDir, float zMin, float zMax, glm::mat4 &lightView, glm::mat4 &lightProj) {
+    //init view coordinates of the light with world origin as temporary origin
+    auto lightUp = glm::abs(lightDir.y) == 1.0f ? glm::vec3(1.0f, 0.0f, 0.0f) : glm::vec3(0.0f, 1.0f, 0.0f);
+    lightView = glm::lookAt(glm::vec3(0.0f), lightDir, lightUp);
+    
+    //convert corner points of the view frustum section to world coordinates
+    auto yMin = glm::tan(0.5f * m_fovy) * zMin;
+    auto yMax = glm::tan(0.5f * m_fovy) * zMax;
+    auto xMin = m_aspectRatio * yMin;
+    auto xMax = m_aspectRatio * yMax;
+    auto invView = glm::inverse(getViewMatrix());
+    std::vector<glm::vec3> frustumPoints = {
+        glm::vec3(-xMin, -yMin, -zMin),
+        glm::vec3(xMin, -yMin, -zMin),
+        glm::vec3(xMin, yMin, -zMin),
+        glm::vec3(-xMin, yMin, -zMin),
+        glm::vec3(-xMax, -yMax, -zMax),
+        glm::vec3(xMax, -yMax, -zMax),
+        glm::vec3(xMax, yMax, -zMax),
+        glm::vec3(-xMax, yMax, -zMax)
+    };
+    for(auto &fp : frustumPoints) {
+        fp = glm::vec3(invView * glm::vec4(fp, 1.0f));
+    }
+
+    //determine bounding box of the view frustum section in temporary light coordinates
+    glm::vec3 bbMin = glm::vec3(std::numeric_limits<float>::max());
+    glm::vec3 bbMax = glm::vec3(std::numeric_limits<float>::min());
+    for(auto &fp : frustumPoints) {
+        auto fl = glm::vec3(lightView * glm::vec4(fp, 1.0f));
+        bbMin = glm::min(bbMin, fl);
+        bbMax = glm::max(bbMax, fl);
+    }
+
+    //move light coordinates just outside the bounding box
+    auto lightPos = glm::vec3(glm::inverse(lightView) * glm::vec4(
+        bbMin.x + 0.5f * (bbMax.x - bbMin.x),
+        bbMin.y + 0.5f * (bbMax.y - bbMin.y),
+        bbMax.z + m_near, 1.0f));
+    lightView = glm::lookAt(lightPos, lightPos + lightDir, lightUp);
+    //fit orthographic projection to the bounding box
+    auto bbSize = glm::max(bbMax.x - bbMin.x, bbMax.y - bbMin.y);
+    float lFar = (bbMax.z - bbMin.z) + m_near;
+    lightProj = glm::transpose(glm::mat4(
+        1.0f / bbSize, 0.0f, 0.0f, 0.0f,
+        0.0f, 1.0f / bbSize, 0.0f, 0.0f,
+        0.0f, 0.0f, -1.0f / (lFar - m_near), - m_near / (lFar - m_near),
+        0.0f, 0.0f, 0.0f, 1.0f));
+    lightProj[1][1] *= -1.0f;
 }
 
 void Camera::setPosition(glm::vec3 position) {

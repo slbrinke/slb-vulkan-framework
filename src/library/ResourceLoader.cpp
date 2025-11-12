@@ -51,7 +51,7 @@ uint32_t ResourceLoader::getDescriptorSetIndex(std::string descriptorName) {
         || descriptorName == "Textures" || descriptorName == "SceneNodeConstants") {
         return 1;
 
-    } else if(descriptorName == "GBuffer" || descriptorName == "ShadingResult") {
+    } else if(descriptorName == "ShadowMaps" || descriptorName == "GBuffer" || descriptorName == "ShadingResult") {
         return 2;
 
     }
@@ -119,15 +119,15 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         + "   mat4 projection;\n"
         + "   float screenWidth;\n"
         + "   float screenHeight;\n"
-        + "   float pad1;\n"
-        + "   float pad2;\n"
+        + "   float nearDepth;\n"
+        + "   float farDepth;\n"
         + "}camera;\n\n";
     } else if(descriptorName == "Renderer") {
         return "layout(set = " + std::to_string(setIndex) + ", binding = 1) uniform RendererUniforms {\n"
         + "   float pi;\n"
         + "   float inversePi;\n"
         + "   float epsilon;\n"
-        + "   float pad;\n"
+        + "   uint shadowMapSize;\n"
         + "}renderer;\n\n"; 
     } else if(descriptorName == "Materials") {
         return std::string("struct Material {\n")
@@ -157,6 +157,8 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         + "   float cosSpotAngle;\n"
         + "   vec3 color;\n"
         + "   float intensity;\n"
+        + "   mat4 shadowView;\n"
+        + "   mat4 shadowProj;\n"
         + "};\n\n"
         + "layout(set = " + std::to_string(setIndex) + ", binding = 1) uniform LightUniforms {\n"
         + "   Light lights[" + std::to_string(sceneCounts[1]) + "];\n"
@@ -172,11 +174,14 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         + "   mat4 model;\n"
         + "   uint currentIndex;\n"
         + "};\n\n";
+    } else if(descriptorName == "ShadowMaps") {
+        return "layout(set = " + std::to_string(setIndex) + ", binding = 0) uniform sampler2DArray shadowMaps;\n\n";
     } else if(descriptorName == "GBuffer") {
         return "layout(input_attachment_index = 0, set = " + std::to_string(setIndex) + ", binding = 0) uniform subpassInputMS gBufferNormals;\n"
         + "layout(input_attachment_index = 1, set = " + std::to_string(setIndex) + ", binding = 1) uniform subpassInputMS gBufferMaterials1;\n"
         + "layout(input_attachment_index = 2, set = " + std::to_string(setIndex) + ", binding = 2) uniform subpassInputMS gBufferMaterials2;\n"
-        + "layout(input_attachment_index = 3, set = " + std::to_string(setIndex) + ", binding = 3) uniform subpassInputMS gBufferDepth;\n\n";
+        + "layout(input_attachment_index = 3, set = " + std::to_string(setIndex) + ", binding = 3) uniform subpassInputMS gBufferDepth;\n"
+        + "layout(set = " + std::to_string(setIndex) + ", binding = 4) uniform sampler2DArray shadowMaps;\n\n";
     } else if(descriptorName == "ShadingResult") {
         return "layout(input_attachment_index = 0, set = " + std::to_string(setIndex) + ", binding = 0) uniform subpassInputMS shadingResult;\n\n";
     }

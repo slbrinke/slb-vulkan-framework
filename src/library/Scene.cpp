@@ -1,6 +1,6 @@
 #include "Scene.h"
 
-Scene::Scene() {
+Scene::Scene(std::shared_ptr<Camera> &camera) : m_camera(camera) {
     m_rootNode = std::make_unique<SceneNode>();
 
     //screen quad
@@ -158,7 +158,28 @@ void Scene::initSceneNode(std::shared_ptr<Context> &context, std::unique_ptr<Sce
 }
 
 void Scene::updateUniforms(std::vector<DescriptorSet> &descriptorSets, uint32_t frameIndex) {
+    //update camera
+    auto screenWidth = static_cast<float>(m_camera->getScreenWidth());
+    auto screenHeight = static_cast<float>(m_camera->getScreenHeight());
+    float camNear = m_camera->getNear();
+    float camFar = m_camera->getFar();
+    CameraUniforms camUniforms{
+        m_camera->getViewMatrix(),
+        m_camera->getProjectionMatrix(),
+        screenWidth, screenHeight,
+        camNear, camFar
+    };
+    descriptorSets[0].updateBuffer("Camera", frameIndex, &camUniforms);
+
+    //update material data
     descriptorSets[1].updateBuffer("Materials", frameIndex, m_materialUniforms.data());
+
+    //update light source data
+    for(auto &light : m_lightUniforms) {
+        if(light.cosSpotAngle == 1.0f) { //directional light
+            m_camera->getLightViewProj(light.direction, camNear, 2.0f, light.shadowView, light.shadowProj);
+        }
+    }
     descriptorSets[1].updateBuffer("Lights", frameIndex, m_lightUniforms.data());
 }
 

@@ -13,7 +13,8 @@
 enum RenderMode {
     renderMeshes, /**< Instanced render call for each mesh in the scene */
     renderLightProxies, /**< Deferred rendering of proxy geometry for each light source in the scene */
-    renderEnvMap
+    renderEnvMap,
+    renderInstancedPoint
 };
 
 /**
@@ -73,6 +74,8 @@ public:
      * Change the type of compute or draw call executed by this render step.
      */
     void setRenderMode(RenderMode mode, uint32_t renderSize = 1);
+
+    void setPrimitiveTopology(VkPrimitiveTopology topology);
 
     /**
      * Load shader files and create shader modules.

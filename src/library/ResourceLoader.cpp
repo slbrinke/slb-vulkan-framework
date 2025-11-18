@@ -26,6 +26,9 @@ void ResourceLoader::findRequiredDescriptorSets(const std::string &fileName, std
     file.seekg(0);
     std::string line;
     while(std::getline(file, line)) {
+        if(!line.empty() && line[line.size() - 1] == '\r') {
+            line.erase(line.size() - 1);
+        }
         if(line.substr(0, 8) == "#include") {
             auto descriptorName = line.substr(9, line.length() - 9);
             auto absoluteIndex = getDescriptorSetIndex(descriptorName);
@@ -51,8 +54,11 @@ uint32_t ResourceLoader::getDescriptorSetIndex(std::string descriptorName) {
         || descriptorName == "Textures" || descriptorName == "SceneNodeConstants") {
         return 1;
 
-    } else if(descriptorName == "ShadowMaps" || descriptorName == "GBuffer" || descriptorName == "ShadingResult") {
+    } else if(descriptorName == "Nodes" || descriptorName == "PlantSpecies" || descriptorName == "PlantPrototypes" || descriptorName == "PlantModules") {
         return 2;
+
+    } else if(descriptorName == "ShadowMaps" || descriptorName == "GBuffer" || descriptorName == "ShadingResult") {
+        return 3;
 
     }
     
@@ -127,8 +133,12 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         + "   float pi;\n"
         + "   float inversePi;\n"
         + "   float epsilon;\n"
+        + "   bool renderShadows;\n"
         + "   uint shadowMapSize;\n"
-        + "}renderer;\n\n"; 
+        + "   float currTime;\n"
+        + "   float deltaTime;\n"
+        + "   float pad;\n"
+        + "}renderer;\n\n";
     } else if(descriptorName == "Materials") {
         return std::string("struct Material {\n")
         + "   vec3 color;\n"
@@ -164,15 +174,82 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         + "   Light lights[" + std::to_string(sceneCounts[1]) + "];\n"
         + "};\n\n";
     } else if(descriptorName == "SceneCounts") {
-        return std::string("layout(set = " + std::to_string(setIndex) + ", binding = 2) buffer SceneCountBuffer {\n")
-        + "   uint sceneCounts[];\n"
+        return std::string("layout(set = " + std::to_string(setIndex) + ", binding = 2) buffer PreviousSceneCountBuffer {\n")
+        + "   uint prevSceneCounts[];\n"
+        + "};\n\n"
+        + "layout(set = " + std::to_string(setIndex) + ", binding = 3) buffer CurrentSceneCountBuffer {\n"
+        + "   uint currSceneCounts[];\n"
         + "};\n\n";
     } else if(descriptorName == "Textures") {
-        return std::string("layout(set = " + std::to_string(setIndex) + ", binding = 3) uniform sampler2D materialTextures[" + std::to_string(sceneCounts[2]) + "];\n\n");
+        return std::string("layout(set = " + std::to_string(setIndex) + ", binding = 4) uniform sampler2D materialTextures[" + std::to_string(sceneCounts[2]) + "];\n\n");
     } else if(descriptorName == "SceneNodeConstants") {
         return std::string("layout(push_constant, std430) uniform SceneNodeConstants {\n")
         + "   mat4 model;\n"
         + "   uint currentIndex;\n"
+        + "};\n\n";
+    } else if(descriptorName == "Nodes") {
+        return std::string("struct Node {\n")
+        + "   uint status;\n"
+        + "   float age;\n"
+        + "   uint ref1;\n"
+        + "   uint ref2;\n"
+        + "   uint order;\n"
+        + "   uint parentIndex;\n"
+        + "   uint numChildren;\n"
+        + "   uint childIndices[5];\n"
+        + "};\n\n"
+        + "layout(set = " + std::to_string(setIndex) + ", binding = 0) buffer PreviousNodeBuffer {\n"
+        + "   Node prevNodes[" + std::to_string(sceneCounts[4]) + "];\n"
+        + "};\n\n"
+        + "layout(set = " + std::to_string(setIndex) + ", binding = 1) buffer CurrentNodeBuffer {\n"
+        + "   Node currNodes[" + std::to_string(sceneCounts[4]) + "];\n"
+        + "};\n\n";
+    } else if(descriptorName == "PlantSpecies") {
+        return std::string("struct PlantSpecies {\n")
+        + "   uint numPrototypes;\n"
+        + "   uint firstPrototype;\n"
+        + "   float maxAge;\n"
+        + "   float growthSpeed;\n"
+        + "   uint maxChildren;\n"
+        + "   float minExtent;\n"
+        + "   float maxExtent;\n"
+        + "   float minRadius;\n"
+        + "   float sizeDecrease[5];\n"
+        + "   float branchingThetas[5];\n"
+        + "   float branchingPhis[5];\n"
+        + "   float gravitropism;\n"
+        + "   float pad1;\n"
+        + "   float pad2;\n"
+        + "   float pad3;\n"
+        + "};\n\n"
+        + "layout(set = " + std::to_string(setIndex) + ", binding = 2) uniform PlantSpeciesUniforms {\n"
+        + "   PlantSpecies plantSpecies[" + std::to_string(sceneCounts[5]) + "];\n"
+        + "};\n\n";
+    } else if(descriptorName == "PlantPrototypes") {
+        return std::string("struct Prototype {\n")
+        + "   float lambda;\n"
+        + "   float determinacy;\n"
+        + "   uint numNodes;\n"
+        + "   uint firstNode;\n"
+        + "};\n\n"
+        + "layout(set = " + std::to_string(setIndex) + ", binding = 3) uniform PlantPrototypeUniforms {\n"
+        + "   Prototype plantPrototypes[" + std::to_string(sceneCounts[6]) + "];\n"
+        + "};\n\n";
+    } else if(descriptorName == "PlantModules") {
+        return std::string("struct Module {\n")
+        + "   vec3 position;\n"
+        + "   float radius;\n"
+        + "   vec4 rotation;\n"
+        + "   uint status;\n"
+        + "   float age;\n"
+        + "   uint speciesIndex;\n"
+        + "   uint prototypeIndex;\n"
+        + "};\n\n"
+        + "layout(set = " + std::to_string(setIndex) + ", binding = 4) buffer PreviousModuleBuffer {\n"
+        + "   Module prevModules[" + std::to_string(sceneCounts[8]) + "];\n"
+        + "};\n\n"
+        + "layout(set = " + std::to_string(setIndex) + ", binding = 5) buffer CurrentModuleBuffer {\n"
+        + "   Module currModules[" + std::to_string(sceneCounts[8]) + "];\n"
         + "};\n\n";
     } else if(descriptorName == "ShadowMaps") {
         return "layout(set = " + std::to_string(setIndex) + ", binding = 0) uniform sampler2DArray shadowMaps;\n\n";

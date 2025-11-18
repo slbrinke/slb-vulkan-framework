@@ -310,12 +310,29 @@ void DescriptorSet::clearBuffer(std::string name, VkCommandBuffer commandBuffer,
     throw std::runtime_error("DESCRIPTOR SET ERROR: Could not find a buffer named " + name);
 }
 
-void DescriptorSet::copyBufferFromLastFrame(std::string name, uint32_t frameIndex) {
+void DescriptorSet::copyBufferFromLastFrame(std::string name, VkCommandBuffer commandBuffer, uint32_t frameIndex) {
     uint32_t descriptorIndex = 0;
     while(descriptorIndex < m_numDescriptors) {
         if(m_descriptors[descriptorIndex].name == name) {
             auto lastFrame = (frameIndex + (m_numFramesInFlight - 1)) % m_numFramesInFlight;
-            m_context->copyBuffer(m_descriptors[descriptorIndex].buffers[lastFrame], m_descriptors[descriptorIndex].buffers[frameIndex], m_descriptors[descriptorIndex].bufferSize);
+            //m_context->copyBuffer(m_descriptors[descriptorIndex].buffers[lastFrame], m_descriptors[descriptorIndex].buffers[frameIndex], m_descriptors[descriptorIndex].bufferSize);
+
+            VkBufferCopy copyRegion{};
+            copyRegion.srcOffset = 0;
+            copyRegion.dstOffset = 0;
+            copyRegion.size = m_descriptors[descriptorIndex].bufferSize;
+            vkCmdCopyBuffer(commandBuffer, m_descriptors[descriptorIndex].buffers[lastFrame], m_descriptors[descriptorIndex].buffers[frameIndex], 1, &copyRegion);
+
+            VkMemoryBarrier barrier{};
+            barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+            barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            vkCmdPipelineBarrier(
+                commandBuffer,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                0, 1, &barrier, 0, nullptr, 0, nullptr);
+
             return;
         }
         descriptorIndex++;

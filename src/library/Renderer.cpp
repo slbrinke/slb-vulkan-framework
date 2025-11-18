@@ -5,6 +5,14 @@ Renderer::Renderer(std::shared_ptr<Context> &context, std::shared_ptr<Scene> &sc
     createSwapChain();
 
     m_depthFormat = m_context->findSupportedFormat({VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT}, VK_IMAGE_TILING_OPTIMAL, VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT);
+
+    m_currTime = static_cast<float>(glfwGetTime());
+    m_prevTime = m_currTime;
+
+    m_pointMesh = std::make_shared<Mesh>();
+    m_pointMesh->addVertex(glm::vec3(0.0f), glm::vec3(0.0f), glm::vec2(0.0f), glm::vec3(0.0f));
+    m_pointMesh->addIndex(0);
+    m_pointMesh->createBuffers(m_context);
 }
 
 Renderer::~Renderer() {
@@ -94,7 +102,7 @@ void Renderer::setUpRenderOutput() {
 }
 
 void Renderer::setUpDescriptorSets() {
-    m_descriptorSets.resize(2, DescriptorSet(m_context, m_numSwapChainImages));
+    m_descriptorSets.resize(3, DescriptorSet(m_context, m_numSwapChainImages));
     m_descriptorSets[0].addBuffer("Camera", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, sizeof(CameraUniforms), false);
     m_descriptorSets[0].addBuffer("Renderer", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, sizeof(RendererUniforms), false);
 
@@ -161,13 +169,18 @@ void Renderer::update() {
     uint32_t frameIndex = m_currentFrame % m_numSwapChainImages;
 
     //update uniforms
+    m_currTime = static_cast<float>(glfwGetTime());
     RendererUniforms rendererUniforms {
         glm::pi<float>(),
         1.0f / glm::pi<float>(),
         0.001f,
-        m_shadowMapSize
+        m_renderShadows ? uint32_t(1) : uint32_t(0),
+        m_shadowMapSize,
+        m_currTime, m_currTime - m_prevTime,
+        0.0f
     };
     m_descriptorSets[0].updateBuffer("Renderer", frameIndex, &rendererUniforms);
+    m_prevTime = m_currTime;
 
     m_scene->updateUniforms(m_descriptorSets, frameIndex);
 
@@ -175,7 +188,7 @@ void Renderer::update() {
 }
 
 void Renderer::compute() {
-    if(false) { //for now
+    if(!m_computeSteps.empty()) {
         uint32_t frameIndex = m_currentFrame % m_numSwapChainImages;
         vkWaitForFences(m_context->getDevice(), 1, &m_computeInFlightFences[frameIndex], VK_TRUE, UINT64_MAX);
 
@@ -220,7 +233,56 @@ void Renderer::compute() {
 }
 
 void Renderer::recordComputeCommandBuffer() {
-    //TO DO
+    uint32_t frameIndex = m_currentFrame % m_numSwapChainImages;
+    auto commandBuffer = m_computeCommandBuffers[frameIndex];
+
+    m_descriptorSets[1].copyBufferFromLastFrame("SceneCounts", commandBuffer, frameIndex);
+
+    for(auto &step : m_computeSteps) {
+        step.start(commandBuffer, frameIndex);
+
+        uint32_t numInvocations = step.getComputeSize();
+        
+        switch(step.getComputeMode()) {
+            case computeSimple:
+                dispatchComputeSimple(step.getComputeSize());
+                break;
+            default:
+                break;
+        }
+
+        step.end(commandBuffer);
+    }
+}
+
+void Renderer::dispatchComputeSimple(uint32_t numInvocations) {
+    uint32_t groupCount = (numInvocations+32-1)/32;
+    vkCmdDispatch(m_computeCommandBuffers[m_currentFrame % m_numSwapChainImages], groupCount, 1, 1);
+}
+
+void Renderer::dispatchComputeCascaded(uint32_t numIterations, uint32_t initialWorkGroup, uint32_t workGroupFactor, bool push) {
+    uint32_t frameIndex = m_currentFrame % m_numSwapChainImages;
+    auto commandBuffer = m_computeCommandBuffers[frameIndex];
+    
+    VkMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    vkCmdPipelineBarrier(
+            commandBuffer,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            0, 1, &barrier, 0, nullptr, 0, nullptr);
+    auto workGroup = initialWorkGroup;
+    for(uint32_t i=0; i<numIterations; i++) {
+        vkCmdDispatch(commandBuffer, static_cast<uint32_t>(glm::ceil(static_cast<float>(workGroup) * 0.5f)), 1, 1);
+        vkCmdPipelineBarrier(
+                commandBuffer,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+                0, 1, &barrier, 0, nullptr, 0, nullptr);
+        workGroup = push ? workGroup / workGroupFactor : workGroup * workGroupFactor;
+    }
 }
 
 void Renderer::render() {
@@ -263,7 +325,7 @@ void Renderer::render() {
     }
 
     std::vector<VkSemaphore> waitSemaphores = {m_imageAvailableSemaphores[frameIndex]};
-    if(false) { //!m_computePipelines.empty()
+    if(!m_computeSteps.empty()) {
         waitSemaphores.emplace_back(m_computeFinishedSemaphores[frameIndex]);
     }
     //VkSemaphore waitSemaphores[] = {m_imageAvailableSemaphores[m_currentFrame], m_computeFinishedSemaphores[m_currentFrame]};
@@ -338,6 +400,9 @@ void Renderer::recordGraphicsCommandBuffer() {
             case renderEnvMap:
                 m_scene->renderEnvironmentMap(commandBuffer);
                 break;
+            case renderInstancedPoint:
+                m_pointMesh->render(commandBuffer, renderStep.getRenderSize());
+                break;
             default:
                 break;
         }
@@ -347,6 +412,7 @@ void Renderer::recordGraphicsCommandBuffer() {
 }
 
 void Renderer::cleanUp() {
+    m_pointMesh->cleanUp(m_context);
     for(uint32_t i=0; i<m_numSwapChainImages; i++) {
         vkDestroySemaphore(m_context->getDevice(), m_imageAvailableSemaphores[i], nullptr);
         vkDestroySemaphore(m_context->getDevice(), m_computeFinishedSemaphores[i], nullptr);
@@ -356,6 +422,9 @@ void Renderer::cleanUp() {
     }
     for(auto &descriptorSet : m_descriptorSets) {
         descriptorSet.cleanUp();
+    }
+    for(auto &step : m_computeSteps) {
+        step.cleanUp();
     }
     for(auto &step : m_renderSteps) {
         step.cleanUp();

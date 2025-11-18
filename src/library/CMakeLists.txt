@@ -10,6 +10,8 @@ set(LIB_SOURCES
         ${LIB_DIR}/Camera.h
         ${LIB_DIR}/Context.cpp
         ${LIB_DIR}/Context.h
+        ${LIB_DIR}/CustomRenderers.cpp
+        ${LIB_DIR}/CustomRenderers.h
         ${LIB_DIR}/DescriptorSet.cpp
         ${LIB_DIR}/DescriptorSet.h
         ${LIB_DIR}/Image.cpp
@@ -21,12 +23,12 @@ set(LIB_SOURCES
         ${LIB_DIR}/Mesh.cpp
         ${LIB_DIR}/Mesh.h
         ${LIB_DIR}/path_config.h
+        ${LIB_DIR}/PlantSpecies.cpp
+        ${LIB_DIR}/PlantSpecies.h
         ${LIB_DIR}/Renderer.cpp
         ${LIB_DIR}/Renderer.h
         ${LIB_DIR}/RenderOutput.cpp
         ${LIB_DIR}/RenderOutput.h
-        ${LIB_DIR}/RenderStep.cpp
-        ${LIB_DIR}/RenderStep.h
         ${LIB_DIR}/ResourceLoader.cpp
         ${LIB_DIR}/ResourceLoader.h
         ${LIB_DIR}/Scene.cpp
@@ -35,6 +37,8 @@ set(LIB_SOURCES
         ${LIB_DIR}/SceneNode.h
         ${LIB_DIR}/StandardRenderers.cpp
         ${LIB_DIR}/StandardRenderers.h
+        ${LIB_DIR}/Step.cpp
+        ${LIB_DIR}/Step.h
 )
 
 add_library(slbLib STATIC ${LIB_SOURCES})

@@ -133,7 +133,7 @@ public:
      * @param name unique name identifying the resource
      * @param frameIndex index of the current frame in flight
      */
-    void copyBufferFromLastFrame(std::string name, uint32_t frameIndex);
+    void copyBufferFromLastFrame(std::string name, VkCommandBuffer commandBuffer, uint32_t frameIndex);
 
     /**
      * Destroy all vulkan components.

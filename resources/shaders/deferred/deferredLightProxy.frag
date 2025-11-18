@@ -141,7 +141,9 @@ void main() {
         matFinal = nl * (matDiffuse + matSpecular + matSheen);
     }
 
-    matFinal *= getShadowFactor(positionCamera, nl, 1);
+    if(renderer.renderShadows) {
+        matFinal *= getShadowFactor(positionCamera, nl, 1);
+    }
 
     fragmentColor = vec4(matFinal * lightColor, 1.0);
 }

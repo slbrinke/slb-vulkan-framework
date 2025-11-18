@@ -49,8 +49,20 @@ glm::vec3 Scene::getBackgroundColor() {
 }
 
 std::vector<uint32_t> Scene::getSceneCounts() {
-    std::vector<uint32_t> counts = {m_numMaterials, m_numLights, m_numTextures};
+    std::vector<uint32_t> counts = {
+        m_numMaterials, m_numLights, m_numTextures,
+        m_numNodes, m_maxNodes,
+        m_numPlantSpecies, m_numPlantPrototypes, m_numPlantModules, m_maxPlantModules, m_maxNodesPerModule
+    };
     return counts;
+}
+
+uint32_t Scene::getMaxPlantModules() {
+    return m_maxPlantModules;
+}
+
+uint32_t Scene::getNumBranches() {
+    return m_maxPlantModules * m_maxNodesPerModule;
 }
 
 void Scene::addSceneNode(std::unique_ptr<SceneNode> &sceneNode) {
@@ -75,6 +87,18 @@ void Scene::addSun(float theta, float phi, glm::vec3 color, float intensity) {
     m_rootNode->addLight(sun);
 }
 
+void Scene::addPlants(PlantSpecies &plantSpecies) {
+    plantSpecies.setIndex(m_numPlantSpecies);
+    m_speciesUniforms.emplace_back(plantSpecies.getUniformData());
+    auto addedPrototypes = plantSpecies.createPrototypes(m_plantPrototypes, m_numNodes, m_nodes);
+    m_speciesUniforms[m_numPlantSpecies].numPrototypes = addedPrototypes;
+    m_numPlantPrototypes += addedPrototypes;
+    auto addedModules = plantSpecies.createModules(m_plantModules);
+    m_numPlantModules += addedModules;
+    m_maxNodesPerModule = glm::max(m_maxNodesPerModule, plantSpecies.getMaxNodesPerPrototype());
+    m_numPlantSpecies++;
+}
+
 void Scene::init(std::shared_ptr<Context> &context, std::vector<DescriptorSet> &descriptorSets) {
     if(m_hasEnvMap) {
         m_textures.emplace_back(context, m_envMapFile);
@@ -85,14 +109,34 @@ void Scene::init(std::shared_ptr<Context> &context, std::vector<DescriptorSet> &
 
     descriptorSets[1].addBuffer("Materials", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_numMaterials * sizeof(MaterialUniforms), false, nullptr);
     descriptorSets[1].addBuffer("Lights", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_numLights * sizeof(LightUniforms), false, nullptr);
-    std::vector<uint32_t> sceneCounts = {m_numMaterials, m_numLights,m_numTextures};
-    descriptorSets[1].addBuffer("SceneCounts", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, sceneCounts.size() * sizeof(uint32_t), false, sceneCounts.data());
+    std::vector<uint32_t> sceneCounts = getSceneCounts();
+    descriptorSets[1].addBuffer("SceneCounts", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, sceneCounts.size() * sizeof(uint32_t), true, sceneCounts.data());
 
     std::vector<VkImageView> textureImageViews;
     for(auto &texture : m_textures) {
         textureImageViews.emplace_back(texture.getView());
     }
     descriptorSets[1].addImages(VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, textureImageViews);
+
+    if(m_numNodes > m_maxNodes) {
+        throw std::runtime_error("SCENE ERROR: The scene can only contain a maximum of " + std::to_string(m_maxNodes) + " nodes");
+    }
+    if(m_numNodes < m_maxNodes) {
+        m_nodes.resize(m_maxNodes);
+    }
+    descriptorSets[2].addBuffer("Nodes", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxNodes * sizeof(Node), true, m_nodes.data());
+    
+    if(m_numPlantSpecies > 0) {
+        descriptorSets[2].addBuffer("PlantSpecies", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_numPlantSpecies * sizeof(SpeciesUniforms), false, m_speciesUniforms.data());
+        descriptorSets[2].addBuffer("PlantPrototypes", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, m_numPlantPrototypes * sizeof(Prototype), false, m_plantPrototypes.data());
+        if(m_numPlantModules > m_maxPlantModules) {
+            throw std::runtime_error("SCENE ERROR: The scene can only contain a maximum of " + std::to_string(m_maxPlantModules) + " plant modules");
+        }
+        if(m_numPlantModules < m_maxPlantModules) {
+            m_plantModules.resize(m_maxPlantModules);
+        }
+        descriptorSets[2].addBuffer("PlantModules", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_maxPlantModules * sizeof(Module), true, m_plantModules.data());
+    }
 
     for(auto &mesh : m_defaultMeshes) {
         mesh->createBuffers(context);
@@ -181,6 +225,9 @@ void Scene::updateUniforms(std::vector<DescriptorSet> &descriptorSets, uint32_t 
         }
     }
     descriptorSets[1].updateBuffer("Lights", frameIndex, m_lightUniforms.data());
+
+    descriptorSets[2].updateBuffer("PlantSpecies", frameIndex, m_speciesUniforms.data());
+    descriptorSets[2].updateBuffer("PlantPrototypes", frameIndex, m_plantPrototypes.data());
 }
 
 void Scene::renderMeshes(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t numInstances) {

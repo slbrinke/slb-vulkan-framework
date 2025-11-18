@@ -98,7 +98,7 @@ void main() {
     //ambient base
     vec3 matFinal = 0.1 * baseColor;
     
-    for(uint l=0; l<sceneCounts[1]; l++) {
+    for(uint l=0; l<currSceneCounts[1]; l++) {
         vec3 lightVector;
         vec3 lightColor = getLightAttenuation(passPositionCamera, l, lightVector);
 

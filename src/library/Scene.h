@@ -6,6 +6,7 @@
 #include "DescriptorSet.h"
 #include "Image.h"
 #include "Light.h"
+#include "PlantSpecies.h"
 
 /**
  * Three-dimensional scene defining geometry and surfaces.
@@ -40,6 +41,22 @@ public:
     std::vector<uint32_t> getSceneCounts();
 
     /**
+     * Return the maximum number of plant modules in the scene.
+     * 
+     * @return size of the plant module buffer
+     */
+    uint32_t getMaxPlantModules();
+
+    /**
+     * Return the maximum number of branch segments in the scene.
+     * 
+     * It is an upper bound estimated from the maximum number of nodes in a prototype and the maximum number of plant modules.
+     * 
+     * @return estimated branch segment number
+     */
+    uint32_t getNumBranches();
+
+    /**
      * Add a new scene node to the scene graph.
      * 
      * The new node is added as a child to the root node.
@@ -71,11 +88,22 @@ public:
     void addSun(float theta, float phi, glm::vec3 color, float intensity);
 
     /**
+     * Add a number of plants of a new species.
+     * 
+     * The exact plants must be added to the species before this point.
+     * 
+     * @param plantSpecies added plant species
+     */
+    void addPlants(PlantSpecies &plantSpecies);
+
+    /**
      * Initialize meshes, materials, and descriptor sets.
      * 
      * Mesh buffers are created and material uniforms are gathered to be provided via descriptor sets.
      * This has to be called before the scene can be rendered.
      * No new meshes or materials can be added to the scene after this point.
+     * 
+     * If plant species have been added species and protoype uniforms and module buffer are added.
      * 
      * @param context pointer to the vulkan context
      * @param descriptorSets list of all descriptor sets used by a renderer
@@ -83,7 +111,11 @@ public:
     void init(std::shared_ptr<Context> &context, std::vector<DescriptorSet> &descriptorSets);
 
     /**
-     * Update material uniform data at the beginning of a new frame.
+     * Update uniform data at the beginning of a new frame.
+     * 
+     * This includes camera and material uniforms.
+     * For the light uniforms of directional light sources the shadow map transformations are updated.
+     * Plant species and module prototypes are also updated.
      * 
      * @param descriptorSets list of all descriptor sets used by a renderer
      * @param frameIndex index of the current frame in flight
@@ -161,6 +193,20 @@ private:
     std::vector<LightUniforms> m_lightUniforms; /**< Uniform data for all lights in the scene */
 
     std::vector<std::shared_ptr<Mesh>> m_defaultMeshes; /**< Default meshes required for deferred rendering */
+
+    uint32_t m_numNodes = 0; /**< Number of nodes in the scene */
+    std::vector<Node> m_nodes; /**< List of nodes provided to shaders */
+    uint32_t m_maxNodes = 30; /**< Size of the node buffer */
+
+    //plants
+    uint32_t m_numPlantSpecies = 0; /**< Number of plant species */
+    std::vector<SpeciesUniforms> m_speciesUniforms; /**< Uniform data for all plant species in the scene */
+    uint32_t m_numPlantPrototypes = 0; /**< Number of plant module prototypes */
+    std::vector<Prototype> m_plantPrototypes; /**< Uniform data for the module prototypes of all plant species */
+    uint32_t m_numPlantModules = 0; /**< Number of initialized plant modules of all plant species */
+    std::vector<Module> m_plantModules; /**< List of plant modules for all plant species */
+    uint32_t m_maxPlantModules = 30; /**< Size of the plant module buffer */
+    uint32_t m_maxNodesPerModule = 0; /**< Maximum number of nodes contained in any of the plant module prototypes */
 
 };
 

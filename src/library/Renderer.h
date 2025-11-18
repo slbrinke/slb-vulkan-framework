@@ -8,7 +8,7 @@
 #include "Context.h"
 #include "Scene.h"
 #include "RenderOutput.h"
-#include "RenderStep.h"
+#include "Step.h"
 
 /**
  * Uniform data providing constants used for different purposes in the shader.
@@ -17,7 +17,11 @@ struct RendererUniforms {
     float pi; /**< The mathematical constant pi */
     float inversePi; /**< One divided by pi */
     float epsilon; /**< Very small value */
-    uint32_t shadowMapSize; /**< Padding for now */
+    uint32_t renderShadows;
+    uint32_t shadowMapSize;
+    float currTime;
+    float deltaTime;
+    float pad;
 };
 
 /**
@@ -105,8 +109,15 @@ protected:
     std::vector<DescriptorSet> m_descriptorSets; /**< List of descriptor sets added to render steps as requested in the shaders */
     std::vector<RenderOutput> m_renderOutput; /**< List of output image sets to render to */
     std::vector<RenderStep> m_renderSteps; /**< Individual rendering steps iterated for every frame */
+    std::vector<ComputeStep> m_computeSteps; /**< Individual compute steps iterated for every frame */
 
+    bool m_renderShadows = false; /**< State parameter turning shadow mapping on and off */
     uint32_t m_shadowMapSize = 1024; /**< Size of all generated shadow maps in number of pixels */
+
+    float m_prevTime = 0.0f; /**< Runtime passed until the previous frame in seconds */
+    float m_currTime = 0.0f; /**< Runtime passed until the current frame in seconds */
+
+    std::shared_ptr<Mesh> m_pointMesh = nullptr; /**< Dummy mesh with a single point used to instantiate shader storage data */
 
 private:
     /**
@@ -119,7 +130,7 @@ private:
     /**
      * Execute compute steps.
      * 
-     * TO DO: this is just a placeholder for now
+     * If compute steps have been defined all relevant commands are recorded and passed to the queue.
      */
     void compute();
 
@@ -129,6 +140,26 @@ private:
      * Iterates over all compute steps and collects the necessary commands.
      */
     void recordComputeCommandBuffer();
+
+    /**
+     * Simple compute call recorded for the currently active compute step.
+     * 
+     * @param numInvocations number of invocations of the active compute shader
+     */
+    void dispatchComputeSimple(uint32_t numInvocations);
+
+    /**
+     * Cascaded compute calls recorded for the currently active compute step.
+     * 
+     * Iterative dispatch computes with changing work group size.
+     * Can be used for prefix sum calculation during voxelization.
+     * 
+     * @param numIterations number of dispatch iterations
+     * @param initialWorkGroup initial size of the work groups in the first iteration
+     * @param workGroupFactor increase/decrease of the work group size between iterations
+     * @param push dictates whether the work group size decreases or increases
+     */
+    void dispatchComputeCascaded(uint32_t numIterations, uint32_t initialWorkGroup, uint32_t workGroupFactor, bool push);
 
     /**
      * Gather all graphics commands into the current graphics command buffer.

@@ -1,48 +1,23 @@
-#include "RenderStep.h"
+#include "Step.h"
 
-RenderStep::RenderStep(std::shared_ptr<Context> &context, uint32_t numFramesInFlight)
+Step::Step(std::shared_ptr<Context> &context, uint32_t numFramesInFlight)
 : m_context(context), m_numFramesInFlight(numFramesInFlight) {
 
 }
 
-RenderStep::~RenderStep() {
+Step::~Step() {
     m_context = nullptr;
 }
 
-VkPipelineLayout RenderStep::getPipelineLayout() {
+VkPipelineLayout Step::getPipelineLayout() {
     return m_pipelineLayout;
 }
 
-RenderMode RenderStep::getRenderMode() {
-    return m_renderMode;
-}
-
-uint32_t RenderStep::getRenderSize() {
-    return m_renderSize;
-}
-
-uint32_t RenderStep::getOutputIndex() {
-    return m_outputIndex;
-}
-
-uint32_t RenderStep::getSubPassIndex() {
-    return m_subPassIndex;
-}
-
-void RenderStep::setName(std::string name) {
+void Step::setName(std::string name) {
     m_name = name;
 }
 
-void RenderStep::setRenderMode(RenderMode mode, uint32_t renderSize) {
-    m_renderMode = mode;
-    m_renderSize = renderSize;
-}
-
-void RenderStep::setPrimitiveTopology(VkPrimitiveTopology topology) {
-    m_primitiveTopology = topology;
-}
-
-void RenderStep::createShaderModules(const std::vector<std::string> &shaderFiles, std::vector<DescriptorSet> &descriptorSets, std::vector<uint32_t> &sceneCounts) {
+void Step::createShaderModules(const std::vector<std::string> &shaderFiles, std::vector<DescriptorSet> &descriptorSets, std::vector<uint32_t> &sceneCounts) {
     for(size_t shader=0; shader<shaderFiles.size(); shader++) {
         ResourceLoader::findRequiredDescriptorSets(shaderFiles[shader], m_requiredDescriptorSets);
     }
@@ -72,7 +47,7 @@ void RenderStep::createShaderModules(const std::vector<std::string> &shaderFiles
     }
 }
 
-VkShaderStageFlagBits RenderStep::getShaderStage(const std::string &fileName) {
+VkShaderStageFlagBits Step::getShaderStage(const std::string &fileName) {
     auto periodPos = fileName.find_last_of('.');
     auto fileType = fileName.substr(periodPos + 1, fileName.length());
     
@@ -89,7 +64,65 @@ VkShaderStageFlagBits RenderStep::getShaderStage(const std::string &fileName) {
         return VK_SHADER_STAGE_COMPUTE_BIT;
     }
 
-    throw std::runtime_error("RENDER STEP ERROR: Unknown shader file type " + fileType);
+    throw std::runtime_error("RENDER/COMPUTE STEP ERROR: Unknown shader file type " + fileType);
+}
+
+void Step::start(VkCommandBuffer commandBuffer, uint32_t frameIndex) {
+    VkDebugUtilsLabelEXT markerInfo{};
+    markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
+    markerInfo.pLabelName = m_name.c_str();
+    auto beginFunc = (PFN_vkCmdBeginDebugUtilsLabelEXT)m_context->getExtensionFunction("vkCmdBeginDebugUtilsLabelEXT");
+    if(beginFunc != nullptr) {
+        beginFunc(commandBuffer, &markerInfo);
+    }
+
+    vkCmdBindPipeline(commandBuffer, m_bindPoint, m_pipeline);
+    vkCmdBindDescriptorSets(commandBuffer, m_bindPoint, m_pipelineLayout, 0, m_descriptorSets[frameIndex].size(), m_descriptorSets[frameIndex].data(), 0, nullptr);
+}
+
+void Step::end(VkCommandBuffer commandBuffer) {
+    auto endFunc = (PFN_vkCmdEndDebugUtilsLabelEXT)m_context->getExtensionFunction("vkCmdEndDebugUtilsLabelEXT");
+    if(endFunc != nullptr) {
+        endFunc(commandBuffer);
+    }
+}
+
+void Step::cleanUp() {
+    vkDestroyPipeline(m_context->getDevice(), m_pipeline, nullptr);
+    vkDestroyPipelineLayout(m_context->getDevice(), m_pipelineLayout, nullptr);
+    for(auto shaderModule : m_shaderModules) {
+        vkDestroyShaderModule(m_context->getDevice(), shaderModule, nullptr);
+    }
+}
+
+RenderStep::RenderStep(std::shared_ptr<Context> &context, uint32_t numFramesInFlight)
+: Step(context, numFramesInFlight) {
+    m_bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+}
+
+RenderMode RenderStep::getRenderMode() {
+    return m_renderMode;
+}
+
+uint32_t RenderStep::getRenderSize() {
+    return m_renderSize;
+}
+
+uint32_t RenderStep::getOutputIndex() {
+    return m_outputIndex;
+}
+
+uint32_t RenderStep::getSubPassIndex() {
+    return m_subPassIndex;
+}
+
+void RenderStep::setRenderMode(RenderMode mode, uint32_t size) {
+    m_renderMode = mode;
+    m_renderSize = size;
+}
+
+void RenderStep::setPrimitiveTopology(VkPrimitiveTopology topology) {
+    m_primitiveTopology = topology;
 }
 
 void RenderStep::setCullMode(VkCullModeFlags mode) {
@@ -101,12 +134,11 @@ void RenderStep::enableBlending() {
 }
 
 void RenderStep::initRenderStep(RenderOutput &output, uint32_t subPassIndex) {
-    m_bindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-    VkGraphicsPipelineCreateInfo pipelineInfo{};
-    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-
     m_outputIndex = output.getIndex();
     m_subPassIndex = subPassIndex;
+
+    VkGraphicsPipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
 
     //shaders
     std::vector<VkPipelineShaderStageCreateInfo> shaderInfos(m_shaderModules.size());
@@ -279,30 +311,66 @@ void RenderStep::initRenderStep(RenderOutput &output, uint32_t subPassIndex) {
     }
 }
 
-void RenderStep::start(VkCommandBuffer commandBuffer, uint32_t frameIndex) {
-    VkDebugUtilsLabelEXT markerInfo{};
-    markerInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_LABEL_EXT;
-    markerInfo.pLabelName = m_name.c_str();
-    auto beginFunc = (PFN_vkCmdBeginDebugUtilsLabelEXT)m_context->getExtensionFunction("vkCmdBeginDebugUtilsLabelEXT");
-    if(beginFunc != nullptr) {
-        beginFunc(commandBuffer, &markerInfo);
-    }
-
-    vkCmdBindPipeline(commandBuffer, m_bindPoint, m_pipeline);
-    vkCmdBindDescriptorSets(commandBuffer, m_bindPoint, m_pipelineLayout, 0, m_descriptorSets[frameIndex].size(), m_descriptorSets[frameIndex].data(), 0, nullptr);
+ComputeStep::ComputeStep(std::shared_ptr<Context> &context, uint32_t numFramesInFlight)
+: Step(context, numFramesInFlight) {
+    m_bindPoint = VK_PIPELINE_BIND_POINT_COMPUTE;
 }
 
-void RenderStep::end(VkCommandBuffer commandBuffer) {
-    auto endFunc = (PFN_vkCmdEndDebugUtilsLabelEXT)m_context->getExtensionFunction("vkCmdEndDebugUtilsLabelEXT");
-    if(endFunc != nullptr) {
-        endFunc(commandBuffer);
-    }
+ComputeMode ComputeStep::getComputeMode() {
+    return m_computeMode;
 }
 
-void RenderStep::cleanUp() {
-    vkDestroyPipeline(m_context->getDevice(), m_pipeline, nullptr);
-    vkDestroyPipelineLayout(m_context->getDevice(), m_pipelineLayout, nullptr);
-    for(auto shaderModule : m_shaderModules) {
-        vkDestroyShaderModule(m_context->getDevice(), shaderModule, nullptr);
+uint32_t ComputeStep::getComputeSize() {
+    return m_computeSize;
+}
+
+void ComputeStep::setComputeMode(ComputeMode mode, uint32_t size) {
+    m_computeMode = mode;
+    m_computeSize = size;
+}
+
+void ComputeStep::createShaderModules(const std::vector<std::string> &shaderFiles, std::vector<DescriptorSet> &descriptorSets, std::vector<uint32_t> &sceneCounts) {
+    if(shaderFiles.size() != 1 || getShaderStage(shaderFiles[0]) != VK_SHADER_STAGE_COMPUTE_BIT) {
+        throw std::runtime_error("COMPUTE STEP ERROR: There can only be one shader per compute step and the file has to end in '.comp'");
+    }
+
+    Step::createShaderModules(shaderFiles, descriptorSets, sceneCounts);
+}
+
+void ComputeStep::initComputeStep() {
+    VkComputePipelineCreateInfo pipelineInfo{};
+    pipelineInfo.sType = VK_STRUCTURE_TYPE_COMPUTE_PIPELINE_CREATE_INFO;
+
+    //shader
+    VkPipelineShaderStageCreateInfo shaderInfo{};
+    shaderInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    shaderInfo.stage = m_shaderStages[0];
+    shaderInfo.module = m_shaderModules[0];
+    shaderInfo.pName = "main";
+    pipelineInfo.stage = shaderInfo;
+
+    //pipeline layout
+    VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+    pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+
+    //descriptor set layouts
+    pipelineLayoutInfo.setLayoutCount = m_descriptorSetLayouts.size();
+    pipelineLayoutInfo.pSetLayouts = m_descriptorSetLayouts.data();
+
+    //push constants
+    std::vector<VkPushConstantRange> pushConstants(1);
+    pushConstants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    pushConstants[0].offset = 0;
+    pushConstants[0].size = sizeof(SceneNodeConstants);
+    pipelineLayoutInfo.pushConstantRangeCount = pushConstants.size();
+    pipelineLayoutInfo.pPushConstantRanges = pushConstants.data();
+
+    if(vkCreatePipelineLayout(m_context->getDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
+        throw std::runtime_error("RENDER STEP ERROR: Could not create pipeline layout");
+    }
+    pipelineInfo.layout = m_pipelineLayout;
+
+    if(vkCreateComputePipelines(m_context->getDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_pipeline) != VK_SUCCESS) {
+        throw std::runtime_error("RENDER STEP ERROR: Could not create compute pipeline");
     }
 }

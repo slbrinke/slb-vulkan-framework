@@ -13,28 +13,10 @@ layout(location = 3) in vec3 inTangent;
 #include PlantModules
 
 layout(location = 0) out vec3 passSize;
-layout(location = 1) out float passAge;
-layout(location = 2) out uint passSpeciesIndex;
-layout(location = 3) out mat4 passNodeModel;
+layout(location = 1) out uint passSpeciesIndex;
+layout(location = 2) out mat4 passNodeModel;
 
-mat4 getModelMatrix(vec3 pos, vec4 rot, float scale) {
-    //scale
-    mat4 mS = scale * mat4(1.0);
-    mS[3][3] = 1.0;
-    //rotate
-    mat4 mR = transpose(mat4(
-        1.0 - 2.0*rot.y*rot.y - 2.0*rot.z*rot.z, 2.0*rot.x*rot.y - 2.0*rot.w*rot.z, 2.0*rot.x*rot.z + 2.0*rot.w*rot.y, 0.0,
-        2.0*rot.x*rot.y + 2.0*rot.w*rot.z, 1.0 - 2.0*rot.x*rot.x - 2.0*rot.z*rot.z, 2.0*rot.y*rot.z - 2.0*rot.w*rot.x, 0.0,
-        2.0*rot.x*rot.z - 2.0*rot.w*rot.y, 2.0*rot.y*rot.z + 2.0*rot.w*rot.x, 1.0 - 2.0*rot.x*rot.x - 2.0*rot.y*rot.y, 0.0,
-        0.0, 0.0, 0.0, 1.0
-    ));
-    //translate
-    mat4 mT = mat4(1.0);
-    mT[3] = vec4(pos, 1.0);
-    return mT * mR * mS;
-}
-
-bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel) {
+bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel, out float nodeExtent) {
     uint speciesIndex = currModules[moduleIndex].speciesIndex;
     uint maxChildren = plantSpecies[speciesIndex].maxChildren;
 
@@ -62,10 +44,7 @@ bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel) 
         2.0*modRot.y*modRot.z - 2.0*modRot.w*modRot.x,
         1.0 - 2.0*modRot.x*modRot.x - 2.0*modRot.y*modRot.y);
     float extent = plantSpecies[speciesIndex].maxExtent;
-    //float radius = plantSpecies[speciesIndex].maxRadius;
-    //float parentRadius = radius;
-    float radius = plantSpecies[speciesIndex].minRadius;
-
+    
     uint listIndex = plantPrototypes[currModules[moduleIndex].prototypeIndex].firstNode;
     for(uint l=0; l<level; l++) {
         base /= maxChildren;
@@ -80,8 +59,6 @@ bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel) 
 
         position += extent * yAxis;
         extent *= plantSpecies[speciesIndex].sizeDecrease[child];
-        //parentRadius = radius;
-        //radius *= plantSpecies[speciesIndex].sizeDecrease[child];
         float theta = plantSpecies[speciesIndex].branchingThetas[child];
         float phi = plantSpecies[speciesIndex].branchingPhis[child];
         float sinTheta = sin(theta);
@@ -107,12 +84,13 @@ bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel) 
             vec4(xAxis, 0.0),
             vec4(yAxis, 0.0),
             vec4(zAxis, 0.0),
-            vec4(position, 1.0))
-        * transpose(mat4(
-            radius, 0.0, 0.0, 0.0,
-            0.0, extent, 0.0, 0.0,
-            0.0, 0.0, radius, 0.0,
-            0.0, 0.0, 0.0, 1.0));
+            vec4(position, 1.0));
+        //* transpose(mat4(
+        //    radius, 0.0, 0.0, 0.0,
+        //    0.0, extent, 0.0, 0.0,
+        //    0.0, 0.0, radius, 0.0,
+        //    0.0, 0.0, 0.0, 1.0));
+    nodeExtent = extent;
     return true;
 }
 
@@ -124,13 +102,13 @@ void main() {
     Module module = currModules[moduleIndex];
     if(module.status > 0) {
         mat4 nodeModel = mat4(1.0);
-        if(!treeIndexToNodeModel(moduleIndex, nodeIndex, nodeModel)) {
+        float extent = 0.0;
+        if(!treeIndexToNodeModel(moduleIndex, nodeIndex, nodeModel, extent)) {
             return;
         }
 
         gl_Position = camera.projection * camera.view * nodeModel * vec4(0.0, 0.0, 0.0, 1.0);
-        passSize = vec3(plantSpecies[module.speciesIndex].minExtent, plantSpecies[module.speciesIndex].maxExtent, plantSpecies[module.speciesIndex].minRadius);
-        passAge = module.age / plantSpecies[module.speciesIndex].maxAge;
+        passSize = vec3(module.age / plantSpecies[module.speciesIndex].maxAge, extent, plantSpecies[module.speciesIndex].minRadius);
         passSpeciesIndex = module.speciesIndex;
         passNodeModel = nodeModel;
     }

@@ -46,10 +46,12 @@ struct SpeciesUniforms {
  */
 struct Module {
     glm::vec3 position; /**< Origin of the module in world coordinates */
-    float radius; /**< Radius of the sphere encompassing the module at its current size */
-    glm::vec4 rotation; /**< Rotation of the module in world coordinates */
     uint32_t status; /**< State of the module within its lifetime */
+    glm::vec4 rotation; /**< Rotation of the module in world coordinates */
+    glm::vec3 center;
+    float radius; /**< Radius of the sphere encompassing the module at its current size */
     float age; /**< Time passed since module creation in simulated seconds */
+    float vigor;
     uint32_t speciesIndex; /**< Index of the plant species within the uniform buffer */
     uint32_t prototypeIndex; /**< Index of the module prototype within the uniform buffer */
 };
@@ -190,7 +192,7 @@ private:
     float m_minBranchRadius = 0.01f; /**< Minimum radius of a branch segment */
     float m_branchSizeDecrease[5] = {0.9f, 0.9f, 0.0f, 0.0f, 0.0f}; /**< Length of each child branch segment in relation to the parent branch segment length */
     float m_branchingThetas[5] = {glm::radians(15.0f), glm::radians(15.0f), 0.0f, 0.0f, 0.0f}; /**< Vertical branching angle of each child branch segment relative to the orientation of the parent */
-    float m_branchingPhis[5] = {glm::radians(50.0f), glm::radians(230.0f), 0.0f, 0.0f, 0.0f}; /**< Horizontal branching angle of each child branch segment relative to the orientation of the parent */
+    float m_branchingPhis[5] = {glm::radians(0.0f), glm::radians(180.0f), 0.0f, 0.0f, 0.0f}; /**< Horizontal branching angle of each child branch segment relative to the orientation of the parent */
     float m_gravitropism = 0.01f; /**< Strength of the impact of gravity on branch segments */
 
 };

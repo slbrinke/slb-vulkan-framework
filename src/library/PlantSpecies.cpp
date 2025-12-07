@@ -106,11 +106,14 @@ uint32_t PlantSpecies::createModules(std::vector<Module> &modules) {
     modules.resize(firstModule + m_numPlants);
     for(uint32_t p=0; p<m_numPlants; p++) {
         modules[firstModule+p].position = m_plantPositions[p];
-        modules[firstModule+p].radius = 0.5f * m_maxBranchLength * (m_initialAges[p] / m_maxAge);
-        float rotAngle = dist(mt) * 2.0f * glm::pi<float>();
+        auto rotAngle = dist(mt) * 2.0f * glm::pi<float>();
         modules[firstModule+p].rotation = glm::vec4(glm::sin(0.5f * rotAngle) * glm::vec3(0.0f, 1.0f, 0.0f), glm::cos(0.5f * rotAngle));
         modules[firstModule+p].status = 1;
+        auto initialLength = m_maxBranchLength * (m_initialAges[p] / m_maxAge);
+        modules[firstModule+p].center = 0.5f * initialLength * m_initialDirections[p];
+        modules[firstModule+p].radius = 0.5f * initialLength;
         modules[firstModule+p].age = m_initialAges[p];
+        modules[firstModule+p].vigor = 1.0f;
         modules[firstModule+p].speciesIndex = m_index;
         modules[firstModule+p].prototypeIndex = static_cast<uint32_t>((2.0f * m_lambda - 1.0f) * static_cast<float>(m_numPrototypes - 1));
     }

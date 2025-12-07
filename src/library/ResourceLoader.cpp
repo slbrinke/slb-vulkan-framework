@@ -238,10 +238,12 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
     } else if(descriptorName == "PlantModules") {
         return std::string("struct Module {\n")
         + "   vec3 position;\n"
-        + "   float radius;\n"
-        + "   vec4 rotation;\n"
         + "   uint status;\n"
+        + "   vec4 rotation;\n"
+        + "   vec3 center;\n"
+        + "   float radius;\n"
         + "   float age;\n"
+        + "   float vigor;\n"
         + "   uint speciesIndex;\n"
         + "   uint prototypeIndex;\n"
         + "};\n\n"

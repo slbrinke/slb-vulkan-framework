@@ -47,4 +47,13 @@ void PlantRenderer::setUpRenderSteps() {
     m_renderSteps.back().setRenderMode(renderInstancedPoint, m_scene->getNumBranches());
     m_renderSteps.back().setPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
     m_renderSteps.back().initRenderStep(m_renderOutput[0], 0);
+
+    m_renderSteps.emplace_back(m_context, m_numSwapChainImages);
+    m_renderSteps.back().setName("Visualize Modules");
+    m_renderSteps.back().createShaderModules(
+        {"plants/visualizeModule.vert", "plants/visualizeModule.geom", "plants/visualizeModule.frag"},
+        m_descriptorSets, sceneCounts);
+    m_renderSteps.back().setRenderMode(renderInstancedPoint, m_scene->getMaxPlantModules());
+    m_renderSteps.back().setPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
+    m_renderSteps.back().initRenderStep(m_renderOutput[0], 0);
 }

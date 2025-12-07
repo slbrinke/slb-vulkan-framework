@@ -27,6 +27,7 @@ int main() {
     camera = std::make_shared<Camera>(screenWidth, screenHeight, context->getWindow());
     camera->setPosition(glm::vec3(0.0f, 1.5f, 0.0f));
     camera->setRadius(3.0f);
+    //camera->setMode(frontView);
 
     scene = std::make_shared<Scene>(camera);
     scene->addEnvironmentMap("sunflowers_puresky_4k.hdr");

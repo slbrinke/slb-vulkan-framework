@@ -3,6 +3,7 @@
 layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 #include Renderer
+#include Simulation
 #include SceneCounts
 #include Nodes
 #include PlantSpecies
@@ -185,7 +186,7 @@ void main() {
 
     if(module.status > 0) {
         if(module.status == 1) {
-            module.age += plantSpecies[module.speciesIndex].growthSpeed * renderer.deltaTime;
+            module.age += plantSpecies[module.speciesIndex].growthSpeed * simulation.deltaTime;
 
             //update bounding sphere
             float relAge = plantSpecies[module.speciesIndex].maxAge - module.age;
@@ -229,7 +230,7 @@ void main() {
                         currModules[addedIndex].position = vec3(nodeModel * vec4(0.0, 0.0, 0.0, 1.0));
                         currModules[addedIndex].rotation = nodeModelToModuleRotation(nodeModel);
                         currModules[addedIndex].status = 1;
-                        currModules[addedIndex].age = plantSpecies[module.speciesIndex].maxAge * renderer.deltaTime;
+                        currModules[addedIndex].age = plantSpecies[module.speciesIndex].maxAge * simulation.deltaTime;
                         currModules[addedIndex].vigor = 1.0;
                         currModules[addedIndex].speciesIndex = module.speciesIndex;
                         currModules[addedIndex].prototypeIndex = module.prototypeIndex;

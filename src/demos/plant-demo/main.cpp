@@ -32,6 +32,7 @@ int main() {
     scene = std::make_shared<Scene>(camera);
     scene->addEnvironmentMap("sunflowers_puresky_4k.hdr");
     scene->addSun(44.0f, 215.0f, glm::vec3(1.0f), 5.0f);
+    scene->setSize(glm::vec3(7.0f));
 
     auto groundMat = std::make_shared<Material>(glm::vec3(0.58f, 0.38f, 0.16f), 0.9f);
     auto groundMesh = std::make_shared<Mesh>();

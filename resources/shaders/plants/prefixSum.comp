@@ -1,0 +1,29 @@
+#version 450
+
+layout (local_size_x = 2, local_size_y = 1, local_size_z = 1) in;
+
+#include Simulation
+#include VoxelCount
+
+void main() {
+    uint totalVoxels = uint(simulation.numVoxels.x * simulation.numVoxels.y * simulation.numVoxels.z);
+    uint stepSize = totalVoxels / (2 * gl_NumWorkGroups.x);
+
+    uint upperID = stepSize * (gl_GlobalInvocationID.x + 1) - 1;
+    uint lowerID = upperID - (stepSize/2);
+
+    if(voxelCount[totalVoxels+1] == 0) { //push
+        voxelCount[upperID] += voxelCount[lowerID];
+
+        if(stepSize == totalVoxels/2 && gl_GlobalInvocationID.x == 1) {
+            voxelCount[totalVoxels] = voxelCount[totalVoxels/2-1] + voxelCount[totalVoxels-1];
+            voxelCount[totalVoxels-1] = voxelCount[totalVoxels/2-1];
+            voxelCount[totalVoxels/2-1] = 0;
+            voxelCount[totalVoxels+1] = 1;
+        }
+    } else { //pull
+        uint tmp = voxelCount[lowerID];
+        voxelCount[lowerID] = voxelCount[upperID];
+        voxelCount[upperID] += tmp;
+    }
+}

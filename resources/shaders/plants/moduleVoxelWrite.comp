@@ -1,0 +1,82 @@
+#version 450
+
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+#include Simulation
+#include PlantModules
+#include VoxelCount
+#include VoxelFill
+#include VoxelData
+
+uint voxelToListIndex(ivec3 voxelIndex) {
+    uint listIndex = 0;
+    listIndex += voxelIndex.x;
+    listIndex += voxelIndex.y * simulation.numVoxels.x;
+    listIndex += voxelIndex.z * (simulation.numVoxels.x * simulation.numVoxels.y);
+    return listIndex;
+}
+
+bool positionToVoxelIndex(vec3 position, out ivec3 voxelIndex) {
+    vec3 relPos = (position / simulation.sceneSize) + 0.5;
+    vec3 clampedPos = min(max(relPos, vec3(0.0)), vec3(1.0));
+    if(clampedPos != relPos) {
+        return false;
+    }
+
+    voxelIndex.x = int(relPos.x * float(simulation.numVoxels.x));
+    voxelIndex.y = int(relPos.y * float(simulation.numVoxels.y));
+    voxelIndex.z = int(relPos.z * float(simulation.numVoxels.z));
+    return true;
+}
+
+mat4 getModelMatrix(vec3 pos, vec4 rot, float scale) {
+    //scale
+    mat4 mS = scale * mat4(1.0);
+    mS[3][3] = 1.0;
+    //rotate
+    mat4 mR = transpose(mat4(
+        1.0 - 2.0*rot.y*rot.y - 2.0*rot.z*rot.z, 2.0*rot.x*rot.y - 2.0*rot.w*rot.z, 2.0*rot.x*rot.z + 2.0*rot.w*rot.y, 0.0,
+        2.0*rot.x*rot.y + 2.0*rot.w*rot.z, 1.0 - 2.0*rot.x*rot.x - 2.0*rot.z*rot.z, 2.0*rot.y*rot.z - 2.0*rot.w*rot.x, 0.0,
+        2.0*rot.x*rot.z - 2.0*rot.w*rot.y, 2.0*rot.y*rot.z + 2.0*rot.w*rot.x, 1.0 - 2.0*rot.x*rot.x - 2.0*rot.y*rot.y, 0.0,
+        0.0, 0.0, 0.0, 1.0
+    ));
+    //translate
+    mat4 mT = mat4(1.0);
+    mT[3] = vec4(pos, 1.0);
+    return mT * mR * mS;
+}
+
+void main() {
+    uint moduleIndex = gl_GlobalInvocationID.x;
+    Module module = prevModules[moduleIndex];
+
+    if(module.status > 0) {
+        vec3 modulePos = vec3(getModelMatrix(module.position, module.rotation, 1.0) * vec4(module.center, 1.0));
+
+        int minX = min(max(int(((modulePos.x - module.radius) / simulation.sceneSize.x + 0.5) * float(simulation.numVoxels.x)), 0), simulation.numVoxels.x-1);
+        int maxX = min(max(int(((modulePos.x + module.radius) / simulation.sceneSize.x + 0.5) * float(simulation.numVoxels.x)), 0), simulation.numVoxels.x-1);
+        for(int x=minX; x<=maxX; x++) {
+            float voxX = min(
+                abs(modulePos.x - (-0.5 * simulation.sceneSize.x + float(x) * simulation.voxelSize.x)),
+                abs(modulePos.x - (-0.5 * simulation.sceneSize.x + float(x+1) * simulation.voxelSize.x)));
+            float currRad = sqrt(voxX*voxX + module.radius*module.radius);
+            int minY = min(max(int(((modulePos.y - currRad) / simulation.sceneSize.y + 0.5) * float(simulation.numVoxels.y)), 0), simulation.numVoxels.y-1);
+            int maxY = min(max(int(((modulePos.y + currRad) / simulation.sceneSize.y + 0.5) * float(simulation.numVoxels.y)), 0), simulation.numVoxels.y-1);
+            for(int y=minY; y<=maxY; y++) {
+                int minZ = min(max(int(((modulePos.z - currRad) / simulation.sceneSize.z + 0.5) * float(simulation.numVoxels.z)), 0), simulation.numVoxels.z-1);
+                int maxZ = min(max(int(((modulePos.z + currRad) / simulation.sceneSize.z + 0.5) * float(simulation.numVoxels.z)), 0), simulation.numVoxels.z-1);
+                for(int z=minZ; z<=maxZ; z++) {
+                    uint listIndex = voxelToListIndex(ivec3(x, y, z));
+                    uint voxelOffset = voxelCount[listIndex];
+                    uint maxFill = voxelCount[listIndex+1] - voxelOffset;
+                    uint fill = atomicAdd(voxelFill[listIndex], 1);
+                    if(fill < maxFill && voxelOffset + fill < simulation.maxCandidates) {
+                        voxelData[voxelOffset + fill] = moduleIndex;
+                    }
+                }
+            }
+        }
+
+    }
+
+}

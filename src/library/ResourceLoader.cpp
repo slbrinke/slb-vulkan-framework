@@ -47,7 +47,7 @@ void ResourceLoader::findRequiredDescriptorSets(const std::string &fileName, std
 }
 
 uint32_t ResourceLoader::getDescriptorSetIndex(std::string descriptorName) {
-    if(descriptorName == "Camera" || descriptorName == "Renderer") {
+    if(descriptorName == "Camera" || descriptorName == "Renderer" || descriptorName == "Simulation") {
         return 0;
 
     } else if(descriptorName == "Materials" || descriptorName == "Lights" || descriptorName == "SceneCounts"
@@ -57,8 +57,11 @@ uint32_t ResourceLoader::getDescriptorSetIndex(std::string descriptorName) {
     } else if(descriptorName == "Nodes" || descriptorName == "PlantSpecies" || descriptorName == "PlantPrototypes" || descriptorName == "PlantModules") {
         return 2;
 
-    } else if(descriptorName == "ShadowMaps" || descriptorName == "GBuffer" || descriptorName == "ShadingResult") {
+    } else if(descriptorName == "VoxelCount" || descriptorName == "VoxelFill" || descriptorName == "VoxelData") {
         return 3;
+
+    } else if(descriptorName == "ShadowMaps" || descriptorName == "GBuffer" || descriptorName == "ShadingResult") {
+        return 4;
 
     }
     
@@ -130,15 +133,24 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         + "}camera;\n\n";
     } else if(descriptorName == "Renderer") {
         return "layout(set = " + std::to_string(setIndex) + ", binding = 1) uniform RendererUniforms {\n"
+        + "   bool renderShadows;\n"
+        + "   uint shadowMapSize;\n"
         + "   float pi;\n"
         + "   float inversePi;\n"
         + "   float epsilon;\n"
-        + "   bool renderShadows;\n"
-        + "   uint shadowMapSize;\n"
-        + "   float currTime;\n"
-        + "   float deltaTime;\n"
-        + "   float pad;\n"
+        + "   float pad1;\n"
+        + "   float pad2;\n"
+        + "   float pad3;\n"
         + "}renderer;\n\n";
+    } else if(descriptorName == "Simulation") {
+        return "layout(set = " + std::to_string(setIndex) + ", binding = 2) uniform SimulationUniforms {\n"
+        + "   vec3 sceneSize;\n"
+        + "   float currTime;\n"
+        + "   ivec3 numVoxels;\n"
+        + "   float deltaTime;\n"
+        + "   vec3 voxelSize;\n"
+        + "   uint maxCandidates;\n"
+        + "}simulation;\n\n";
     } else if(descriptorName == "Materials") {
         return std::string("struct Material {\n")
         + "   vec3 color;\n"
@@ -252,6 +264,18 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         + "};\n\n"
         + "layout(set = " + std::to_string(setIndex) + ", binding = 5) buffer CurrentModuleBuffer {\n"
         + "   Module currModules[" + std::to_string(sceneCounts[8]) + "];\n"
+        + "};\n\n";
+    } else if(descriptorName == "VoxelCount") {
+        return std::string("layout(set = " + std::to_string(setIndex) + ", binding = 0) buffer VoxelCountBuffer {\n")
+        + "   uint voxelCount[];\n"
+        + "};\n\n";
+    } else if(descriptorName == "VoxelFill") {
+        return std::string("layout(set = " + std::to_string(setIndex) + ", binding = 1) buffer VoxelFillBuffer {\n")
+        + "   uint voxelFill[];\n"
+        + "};\n\n";
+    } else if(descriptorName == "VoxelData") {
+        return std::string("layout(set = " + std::to_string(setIndex) + ", binding = 2) buffer VoxelDataBuffer {\n")
+        + "   uint voxelData[];\n"
         + "};\n\n";
     } else if(descriptorName == "ShadowMaps") {
         return "layout(set = " + std::to_string(setIndex) + ", binding = 0) uniform sampler2DArray shadowMaps;\n\n";

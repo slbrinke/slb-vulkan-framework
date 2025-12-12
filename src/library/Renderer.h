@@ -14,14 +14,23 @@
  * Uniform data providing constants used for different purposes in the shader.
  */
 struct RendererUniforms {
+    uint32_t renderShadows; /**< 1 (=true) if shadow mapping is enabled */
+    uint32_t shadowMapSize; /**< Width and height of the shadow maps in number of pixels */
     float pi; /**< The mathematical constant pi */
     float inversePi; /**< One divided by pi */
     float epsilon; /**< Very small value */
-    uint32_t renderShadows;
-    uint32_t shadowMapSize;
-    float currTime;
-    float deltaTime;
-    float pad;
+    float pad1;
+    float pad2;
+    float pad3;
+};
+
+struct SimulationUniforms {
+    glm::vec3 sceneSize; /**< Total size of the scene in world coordinates */
+    float currTime; /**< Time passed since the start of the simulation in seconds */
+    glm::ivec3 numVoxels; /**< Number of voxels in each dimension */
+    float deltaTime; /**< Time passed since the last frame in seconds */
+    glm::vec3 voxelSize; /**< Size of a single voxel in each dimension */
+    uint32_t maxCandidates;
 };
 
 /**
@@ -114,10 +123,14 @@ protected:
     bool m_renderShadows = false; /**< State parameter turning shadow mapping on and off */
     uint32_t m_shadowMapSize = 1024; /**< Size of all generated shadow maps in number of pixels */
 
+    std::shared_ptr<Mesh> m_pointMesh = nullptr; /**< Dummy mesh with a single point used to instantiate shader storage data */
+
     float m_prevTime = 0.0f; /**< Runtime passed until the previous frame in seconds */
     float m_currTime = 0.0f; /**< Runtime passed until the current frame in seconds */
 
-    std::shared_ptr<Mesh> m_pointMesh = nullptr; /**< Dummy mesh with a single point used to instantiate shader storage data */
+    bool m_useVoxels = false;
+    glm::ivec3 m_numVoxels{4};
+    uint32_t m_numVoxelCandidates = 0;
 
 private:
     /**

@@ -44,6 +44,10 @@ Scene::Scene(std::shared_ptr<Camera> &camera) : m_camera(camera) {
     
 }
 
+glm::vec3 Scene::getSize() {
+    return m_size;
+}
+
 glm::vec3 Scene::getBackgroundColor() {
     return m_backgroundColor;
 }
@@ -63,6 +67,10 @@ uint32_t Scene::getMaxPlantModules() {
 
 uint32_t Scene::getNumBranches() {
     return m_maxPlantModules * m_maxNodesPerModule;
+}
+
+void Scene::setSize(glm::vec3 size) {
+    m_size = size;
 }
 
 void Scene::addSceneNode(std::unique_ptr<SceneNode> &sceneNode) {
@@ -147,6 +155,17 @@ void Scene::initSceneNode(std::shared_ptr<Context> &context, std::unique_ptr<Sce
     auto model = parentModel * sceneNode->getModelMatrix();
 
     if(sceneNode->hasMesh()) {
+        //adapt scene size if necessary
+        auto bbCenter = sceneNode->getMesh()->getBBCenter();
+        auto bbSize = sceneNode->getMesh()->getBBSize();
+        for(int i=0; i<8; i++) {
+            auto x = static_cast<float>(2 * (((i+1)/2)%2) - 1);
+            auto y = static_cast<float>(2 * ((i/2)%2) - 1);
+            auto z = static_cast<float>(2 * (i/4) - 1);
+            auto bbCorner = glm::vec3(model * glm::vec4(bbCenter + 0.5f * glm::vec3(x, y, z) * bbSize, 1.0f));
+            m_size = glm::max(m_size, 2.0f * glm::abs(bbCorner));
+        }
+
         if(!sceneNode->getMesh()->hasBuffers()) {
             sceneNode->getMesh()->createBuffers(context);
         }

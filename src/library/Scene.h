@@ -26,6 +26,8 @@ public:
     Scene(std::shared_ptr<Camera> &camera);
     ~Scene() = default;
 
+    glm::vec3 getSize();
+
     /**
      * Change the background color the scene is displayed in front of.
      * 
@@ -55,6 +57,8 @@ public:
      * @return estimated branch segment number
      */
     uint32_t getNumBranches();
+
+    void setSize(glm::vec3 size);
 
     /**
      * Add a new scene node to the scene graph.
@@ -177,6 +181,7 @@ private:
 
     std::shared_ptr<Camera> m_camera; /**< Pointer to the camera viewing the scene */
 
+    glm::vec3 m_size{1.0f};
     glm::vec3 m_backgroundColor{0.43f, 0.38f, 0.3f}; /**< Color displayed in the background of the scene */
 
     std::unique_ptr<SceneNode> m_rootNode; /**< Root node of the scene graph */

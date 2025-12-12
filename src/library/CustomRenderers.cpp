@@ -2,6 +2,8 @@
 
 PlantRenderer::PlantRenderer(std::shared_ptr<Context> &context, std::shared_ptr<Scene> &scene)
 : Renderer(context, scene) {
+    m_useVoxels = true;
+
     setUpRenderOutput();
     setUpDescriptorSets();
     setUpRenderSteps();
@@ -22,6 +24,30 @@ void PlantRenderer::setUpRenderOutput() {
 
 void PlantRenderer::setUpRenderSteps() {
     auto sceneCounts = m_scene->getSceneCounts();
+
+    m_computeSteps.emplace_back(m_context, m_numSwapChainImages);
+    m_computeSteps.back().setName("Module Voxel Count");
+    m_computeSteps.back().createShaderModules(
+        {"plants/moduleVoxelCount.comp"},
+        m_descriptorSets, sceneCounts);
+    m_computeSteps.back().setComputeMode(computeSimple, m_scene->getMaxPlantModules());
+    m_computeSteps.back().initComputeStep();
+
+    m_computeSteps.emplace_back(m_context, m_numSwapChainImages);
+    m_computeSteps.back().setName("Prefix Sum");
+    m_computeSteps.back().createShaderModules(
+        {"plants/prefixSum.comp"},
+        m_descriptorSets, sceneCounts);
+    m_computeSteps.back().setComputeMode(computeCascaded, m_numVoxels.x * m_numVoxels.y * m_numVoxels.z);
+    m_computeSteps.back().initComputeStep();
+
+    m_computeSteps.emplace_back(m_context, m_numSwapChainImages);
+    m_computeSteps.back().setName("Module Voxel Write");
+    m_computeSteps.back().createShaderModules(
+        {"plants/moduleVoxelWrite.comp"},
+        m_descriptorSets, sceneCounts);
+    m_computeSteps.back().setComputeMode(computeSimple, m_scene->getMaxPlantModules());
+    m_computeSteps.back().initComputeStep();
 
     m_computeSteps.emplace_back(m_context, m_numSwapChainImages);
     m_computeSteps.back().setName("Update Plant Modules");
@@ -54,6 +80,15 @@ void PlantRenderer::setUpRenderSteps() {
         {"plants/visualizeModule.vert", "plants/visualizeModule.geom", "plants/visualizeModule.frag"},
         m_descriptorSets, sceneCounts);
     m_renderSteps.back().setRenderMode(renderInstancedPoint, m_scene->getMaxPlantModules());
+    m_renderSteps.back().setPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
+    m_renderSteps.back().initRenderStep(m_renderOutput[0], 0);
+
+    m_renderSteps.emplace_back(m_context, m_numSwapChainImages);
+    m_renderSteps.back().setName("Visualize Voxels");
+    m_renderSteps.back().createShaderModules(
+        {"plants/visualizeVoxel.vert", "plants/visualizeVoxel.geom", "plants/visualizeVoxel.frag"},
+        m_descriptorSets, sceneCounts);
+    m_renderSteps.back().setRenderMode(renderInstancedPoint, m_numVoxels.x * m_numVoxels.y * m_numVoxels.z);
     m_renderSteps.back().setPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
     m_renderSteps.back().initRenderStep(m_renderOutput[0], 0);
 }

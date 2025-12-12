@@ -102,9 +102,18 @@ void Renderer::setUpRenderOutput() {
 }
 
 void Renderer::setUpDescriptorSets() {
-    m_descriptorSets.resize(3, DescriptorSet(m_context, m_numSwapChainImages));
+    m_descriptorSets.resize(4, DescriptorSet(m_context, m_numSwapChainImages));
     m_descriptorSets[0].addBuffer("Camera", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, sizeof(CameraUniforms), false);
     m_descriptorSets[0].addBuffer("Renderer", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, sizeof(RendererUniforms), false);
+    m_descriptorSets[0].addBuffer("Simulation", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, sizeof(SimulationUniforms), false);
+
+    if(m_useVoxels) {
+        auto totalVoxels = m_numVoxels.x * m_numVoxels.y * m_numVoxels.z;
+        m_descriptorSets[3].addBuffer("VoxelCount", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, (totalVoxels + 2) * sizeof(uint32_t), false);
+        m_descriptorSets[3].addBuffer("VoxelFill", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, totalVoxels * sizeof(uint32_t), false);
+        m_numVoxelCandidates = 5 * m_scene->getMaxPlantModules();
+        m_descriptorSets[3].addBuffer("VoxelData", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, m_numVoxelCandidates * sizeof(uint32_t), false);
+    }
 
     m_scene->init(m_context, m_descriptorSets);
 
@@ -169,17 +178,29 @@ void Renderer::update() {
     uint32_t frameIndex = m_currentFrame % m_numSwapChainImages;
 
     //update uniforms
-    m_currTime = static_cast<float>(glfwGetTime());
     RendererUniforms rendererUniforms {
+        m_renderShadows ? uint32_t(1) : uint32_t(0),
+        m_shadowMapSize,
         glm::pi<float>(),
         1.0f / glm::pi<float>(),
         0.001f,
-        m_renderShadows ? uint32_t(1) : uint32_t(0),
-        m_shadowMapSize,
-        m_currTime, m_currTime - m_prevTime,
-        0.0f
+        0.0f, 0.0f, 0.0f
     };
     m_descriptorSets[0].updateBuffer("Renderer", frameIndex, &rendererUniforms);
+    auto sceneSize = m_scene->getSize();
+    m_currTime = static_cast<float>(glfwGetTime());
+    SimulationUniforms simulationUniforms {
+        sceneSize,
+        m_currTime,
+        m_numVoxels,
+        m_currTime - m_prevTime,
+        glm::vec3(
+            sceneSize.x / static_cast<float>(m_numVoxels.x),
+            sceneSize.y / static_cast<float>(m_numVoxels.y),
+            sceneSize.z / static_cast<float>(m_numVoxels.z)),
+        m_numVoxelCandidates
+    };
+    m_descriptorSets[0].updateBuffer("Simulation", frameIndex, &simulationUniforms);
     m_prevTime = m_currTime;
 
     m_scene->updateUniforms(m_descriptorSets, frameIndex);
@@ -237,6 +258,11 @@ void Renderer::recordComputeCommandBuffer() {
     auto commandBuffer = m_computeCommandBuffers[frameIndex];
 
     m_descriptorSets[1].copyBufferFromLastFrame("SceneCounts", commandBuffer, frameIndex);
+    if(m_useVoxels) {
+        m_descriptorSets[3].clearBuffer("VoxelCount", commandBuffer, frameIndex);
+        m_descriptorSets[3].clearBuffer("VoxelFill", commandBuffer, frameIndex);
+        m_descriptorSets[3].clearBuffer("VoxelData", commandBuffer, frameIndex);
+    }
 
     for(auto &step : m_computeSteps) {
         step.start(commandBuffer, frameIndex);
@@ -246,6 +272,11 @@ void Renderer::recordComputeCommandBuffer() {
         switch(step.getComputeMode()) {
             case computeSimple:
                 dispatchComputeSimple(step.getComputeSize());
+                break;
+            case computeCascaded:
+                //numInvocations is the total number of voxels
+                dispatchComputeCascaded(glm::log2(numInvocations)-1, numInvocations/2, 2, true);
+                dispatchComputeCascaded(glm::log2(numInvocations)-1, 2, 2, false);
                 break;
             default:
                 break;
@@ -258,6 +289,16 @@ void Renderer::recordComputeCommandBuffer() {
 void Renderer::dispatchComputeSimple(uint32_t numInvocations) {
     uint32_t groupCount = (numInvocations+32-1)/32;
     vkCmdDispatch(m_computeCommandBuffers[m_currentFrame % m_numSwapChainImages], groupCount, 1, 1);
+    
+    VkMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+    vkCmdPipelineBarrier(
+            m_computeCommandBuffers[m_currentFrame % m_numSwapChainImages],
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            0, 1, &barrier, 0, nullptr, 0, nullptr);
 }
 
 void Renderer::dispatchComputeCascaded(uint32_t numIterations, uint32_t initialWorkGroup, uint32_t workGroupFactor, bool push) {

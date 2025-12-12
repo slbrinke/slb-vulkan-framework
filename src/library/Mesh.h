@@ -64,6 +64,10 @@ public:
      */
     bool hasBuffers();
 
+    glm::vec3 getBBCenter();
+
+    glm::vec3 getBBSize();
+
     float getMaxRadius();
 
     /**
@@ -171,6 +175,8 @@ private:
     VkBuffer m_indexBuffer = VK_NULL_HANDLE; /**< Vulkan handle of the index buffer */
     VkDeviceMemory m_indexMemory = VK_NULL_HANDLE; /**< Memory containing the index data */
 
+    glm::vec3 m_bbMin{std::numeric_limits<float>::max()};
+    glm::vec3 m_bbMax{std::numeric_limits<float>::min()};
     float m_maxSquaredRadius = 0.0f;
 
 };

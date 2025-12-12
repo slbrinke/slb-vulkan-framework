@@ -8,6 +8,14 @@ bool Mesh::hasBuffers() {
     return m_hasBuffers;
 }
 
+glm::vec3 Mesh::getBBCenter() {
+    return m_bbMin + 0.5f * (m_bbMax - m_bbMin);
+}
+
+glm::vec3 Mesh::getBBSize() {
+    return m_bbMax - m_bbMin;
+}
+
 float Mesh::getMaxRadius() {
     return glm::sqrt(m_maxSquaredRadius);
 }
@@ -20,6 +28,8 @@ void Mesh::addVertex(glm::vec3 position, glm::vec3 normal, glm::vec2 texCoord, g
         glm::normalize(tangent)
     });
 
+    m_bbMin = glm::min(m_bbMin, position);
+    m_bbMax = glm::max(m_bbMax, position);
     m_maxSquaredRadius = glm::max(m_maxSquaredRadius, position.x*position.x + position.y*position.y + position.z*position.z);
 }
 

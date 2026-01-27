@@ -11,7 +11,7 @@
 #include "Step.h"
 
 /**
- * Uniform data providing constants used for different purposes in the shader.
+ * Uniform data providing constants used for different purposes in the shaders.
  */
 struct RendererUniforms {
     uint32_t renderShadows; /**< 1 (=true) if shadow mapping is enabled */
@@ -24,6 +24,11 @@ struct RendererUniforms {
     float pad3;
 };
 
+/**
+ * Uniform data providing scene properties relevant for simulation in the shaders.
+ * 
+ * This includes a simulation timer and voxel grid sizes.
+ */
 struct SimulationUniforms {
     glm::vec3 sceneSize; /**< Total size of the scene in world coordinates */
     float currTime; /**< Time passed since the start of the simulation in seconds */
@@ -128,9 +133,10 @@ protected:
     float m_prevTime = 0.0f; /**< Runtime passed until the previous frame in seconds */
     float m_currTime = 0.0f; /**< Runtime passed until the current frame in seconds */
 
-    bool m_useVoxels = false;
-    glm::ivec3 m_numVoxels{4};
-    uint32_t m_numVoxelCandidates = 0;
+    bool m_useVoxels = false; /**< State parameter turning voxelization on and off */
+    float m_avgVoxelSize = 2.0f; /**< Ideal size of a single voxel in world space (used to determine number of voxels) */
+    glm::ivec3 m_numVoxels{4}; /**< Number of voxels in each dimension (has to be a power of 2) */
+    uint32_t m_numVoxelCandidates = 0; /**< Average number of elements that can be stored per voxel (used to determine voxel buffer size) */
 
 private:
     /**
@@ -160,6 +166,17 @@ private:
      * @param numInvocations number of invocations of the active compute shader
      */
     void dispatchComputeSimple(uint32_t numInvocations);
+
+    /**
+     * Multiple compute call recorded for the currently active compute step.
+     * 
+     * The index of the current iteration is passed as a push constant.
+     * 
+     * @param numIterations number of compute dispatches
+     * @param numInvocations number of invocations for each compute dispatch
+     * @param pipelineLayout pipeline layout of the current render step
+     */
+    void dispatchComputeIterated(uint32_t numIterations, uint32_t numInvocations, VkPipelineLayout pipelineLayout);
 
     /**
      * Cascaded compute calls recorded for the currently active compute step.

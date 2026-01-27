@@ -56,13 +56,19 @@ std::vector<uint32_t> Scene::getSceneCounts() {
     std::vector<uint32_t> counts = {
         m_numMaterials, m_numLights, m_numTextures,
         m_numNodes, m_maxNodes,
-        m_numPlantSpecies, m_numPlantPrototypes, m_numPlantModules, m_maxPlantModules, m_maxNodesPerModule
+        m_numPlantSpecies, m_numPlantPrototypes,
+        m_numPlantModules, m_maxPlantModules,
+        m_maxNodesPerModule, m_maxModuleOrder
     };
     return counts;
 }
 
 uint32_t Scene::getMaxPlantModules() {
     return m_maxPlantModules;
+}
+
+uint32_t Scene::getMaxModuleOrder() {
+    return m_maxModuleOrder;
 }
 
 uint32_t Scene::getNumBranches() {
@@ -103,6 +109,7 @@ void Scene::addPlants(PlantSpecies &plantSpecies) {
     m_numPlantPrototypes += addedPrototypes;
     auto addedModules = plantSpecies.createModules(m_plantModules);
     m_numPlantModules += addedModules;
+    m_maxModuleOrder = glm::max(m_maxModuleOrder, plantSpecies.getMaxModuleOrder());
     m_maxNodesPerModule = glm::max(m_maxNodesPerModule, plantSpecies.getMaxNodesPerPrototype());
     m_numPlantSpecies++;
 }

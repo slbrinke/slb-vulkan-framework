@@ -4,12 +4,14 @@ layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 
 #include Renderer
 #include Simulation
-#include SceneCounts
 #include Nodes
 #include PlantSpecies
 #include PlantPrototypes
 #include PlantModules
+#include VoxelCount
+#include VoxelData
 
+/*
 bool listIndexToChildModel(uint moduleIndex, uint listIndex, out mat4 nodeModel) {
     uint speciesIndex = prevModules[moduleIndex].speciesIndex;
     uint maxChildren = plantSpecies[speciesIndex].maxChildren;
@@ -95,6 +97,7 @@ bool listIndexToChildModel(uint moduleIndex, uint listIndex, out mat4 nodeModel)
         vec4(position, 1.0));
     return true;
 }
+*/
 
 bool listIndexToBudPos(uint moduleIndex, uint listIndex, out vec3 budPos) {
     uint speciesIndex = prevModules[moduleIndex].speciesIndex;
@@ -165,82 +168,47 @@ bool listIndexToBudPos(uint moduleIndex, uint listIndex, out vec3 budPos) {
     return true;
 }
 
-vec4 nodeModelToModuleRotation(mat4 nodeModel) {
-    float x, y, z;
-    float w = 0.5 * sqrt(nodeModel[0][0] + nodeModel[1][1] + nodeModel[2][2] + 1.0);
-    if(abs(w) > renderer.epsilon) {
-        x = (nodeModel[1][2] - nodeModel[2][1]) / (4.0 * w);
-        y = (nodeModel[2][0] - nodeModel[0][2]) / (4.0 * w);
-        z = (nodeModel[0][1] - nodeModel[1][0]) / (4.0 * w);
-    } else {
-        x = sqrt(0.5 * (nodeModel[0][0] + 1.0));
-        y = sqrt(0.5 * (nodeModel[1][1] + 1.0));
-        z = sqrt(0.5 * (nodeModel[2][2] + 1.0));
+void updateBoundingSphere(uint moduleIndex, out vec3 bsCenter, out float bsRadius) {
+    uint prototypeIndex = prevModules[moduleIndex].prototypeIndex;
+    float relAge = plantSpecies[prevModules[moduleIndex].speciesIndex].maxAge - prevModules[moduleIndex].age;
+    vec3 budPos = vec3(0.0);
+    vec3 budMin = vec3(0.0);
+    vec3 budMax = vec3(0.0);
+    for(uint n=0; n<plantPrototypes[prototypeIndex].numNodes; n++) {
+        uint listIndex = plantPrototypes[prototypeIndex].firstNode + n;
+        if(currNodes[listIndex].age >= relAge && listIndexToBudPos(moduleIndex, listIndex, budPos)) {
+            budMin = min(budMin, budPos);
+            budMax = max(budMax, budPos);
+        }
     }
-    return vec4(x, y, z, w);
+    bsCenter = budMin + 0.5 * (budMax - budMin);
+    vec3 budDist = bsCenter;
+    float maxDistSq = dot(budDist, budDist);
+    for(uint n=0; n<plantPrototypes[prototypeIndex].numNodes; n++) {
+        uint listIndex = plantPrototypes[prototypeIndex].firstNode + n;
+        if(currNodes[listIndex].age >= relAge && listIndexToBudPos(moduleIndex, listIndex, budPos)) {
+            budDist = budPos - bsCenter;
+            maxDistSq = max(maxDistSq, dot(budDist, budDist));
+        }
+    }
+    bsRadius = sqrt(maxDistSq);
 }
 
 void main() {
     uint moduleIndex = gl_GlobalInvocationID.x;
     Module module = prevModules[moduleIndex];
 
-    if(module.status > 0) {
+    if(module.status == 0) {
+        //pass deletions on to next frame
+        currModules[moduleIndex].status = 0;
+
+    } else {
         if(module.status == 1) {
-            module.age += plantSpecies[module.speciesIndex].growthSpeed * simulation.deltaTime;
+            updateBoundingSphere(moduleIndex, module.center, module.radius);
 
-            //update bounding sphere
-            float relAge = plantSpecies[module.speciesIndex].maxAge - module.age;
-            vec3 budPos = vec3(0.0);
-            vec3 budMin = vec3(0.0);
-            vec3 budMax = vec3(0.0);
-            for(uint n=0; n<plantPrototypes[module.prototypeIndex].numNodes; n++) {
-                uint listIndex = plantPrototypes[module.prototypeIndex].firstNode + n;
-                if(currNodes[listIndex].age >= relAge && listIndexToBudPos(moduleIndex, listIndex, budPos)) {
-                    budMin = min(budMin, budPos);
-                    budMax = max(budMax, budPos);
-                }
-            }
-            vec3 bsCenter = budMin + 0.5 * (budMax - budMin);
-            vec3 budDist = bsCenter;
-            float maxDistSq = dot(budDist, budDist);
-            for(uint n=0; n<plantPrototypes[module.prototypeIndex].numNodes; n++) {
-                uint listIndex = plantPrototypes[module.prototypeIndex].firstNode + n;
-                if(currNodes[listIndex].age >= relAge && listIndexToBudPos(moduleIndex, listIndex, budPos)) {
-                    budDist = budPos - bsCenter;
-                    maxDistSq = max(maxDistSq, dot(budDist, budDist));
-                }
-            }
-            module.center = bsCenter;
-            module.radius = sqrt(maxDistSq);
-            
-            if(module.age >= plantSpecies[module.speciesIndex].maxAge) {
-                module.status = 2;
-            }
-
-        } else if(module.status == 2) {
-
-            //add child modules
-            for(uint n=0; n<plantPrototypes[module.prototypeIndex].numNodes; n++) {
-                uint listIndex = plantPrototypes[module.prototypeIndex].firstNode + n;
-                mat4 nodeModel = mat4(1.0);
-                if(currNodes[listIndex].numChildren == 0
-                && listIndexToChildModel(moduleIndex, listIndex, nodeModel)) {
-                    uint addedIndex = atomicAdd(currSceneCounts[7], 1);
-                    if(addedIndex < currSceneCounts[8]) {
-                        currModules[addedIndex].position = vec3(nodeModel * vec4(0.0, 0.0, 0.0, 1.0));
-                        currModules[addedIndex].rotation = nodeModelToModuleRotation(nodeModel);
-                        currModules[addedIndex].status = 1;
-                        currModules[addedIndex].age = plantSpecies[module.speciesIndex].maxAge * simulation.deltaTime;
-                        currModules[addedIndex].vigor = 1.0;
-                        currModules[addedIndex].speciesIndex = module.speciesIndex;
-                        currModules[addedIndex].prototypeIndex = module.prototypeIndex;
-                    }
-                }
-            }
-
-            module.status = 3;
+            //TO DO: update module orientation
         }
-
+        
         currModules[moduleIndex] = module;
     }
 }

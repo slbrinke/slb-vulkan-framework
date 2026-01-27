@@ -204,6 +204,7 @@ private:
  */
 enum ComputeMode {
     computeSimple, /**< Simple compute command with a fixed size */
+    computeIterated, /**< Multiple compute commands with the same fixed size */
     computeCascaded /**< Sequence of compute commands with varying work group size */
 };
 
@@ -227,12 +228,32 @@ public:
     uint32_t getComputeSize();
 
     /**
+     * Return the number of compute iterations.
+     * 
+     * This is only relevant if the compute mode is computeIterated.
+     * Otherwise the value should be set to 1.
+     * 
+     * @return number of compute dispatch calls executed in this step
+     */
+    uint32_t getNumIterations();
+
+    /**
      * Change the type of command executed by this compute step.
      * 
      * @param mode type of compute command
      * @param size number of invocations
      */
     void setComputeMode(ComputeMode mode, uint32_t size);
+
+    /**
+     * Change the number of compute iterations.
+     * 
+     * This is only relevant if the compute mode is computeIterated.
+     * Otherwise the value should be set to 1.
+     * 
+     * @param numIterations number of compute dispatch calls executed in this step
+     */
+    void setNumIterations(uint32_t numIterations);
 
     void createShaderModules(const std::vector<std::string> &shaderFiles, std::vector<DescriptorSet> &descriptorSets, std::vector<uint32_t> &sceneCounts) override;
 
@@ -245,6 +266,7 @@ private:
 
     ComputeMode m_computeMode = computeSimple; /**< Type of compute dispatch executed as the main command */
     uint32_t m_computeSize = 100; /**< Number of invocations of the compute shader */
+    uint32_t m_numIterations = 1; /**< Number of compute dispatch calls */
     
 };
 

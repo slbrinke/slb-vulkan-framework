@@ -108,6 +108,10 @@ void Renderer::setUpDescriptorSets() {
     m_descriptorSets[0].addBuffer("Simulation", VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, sizeof(SimulationUniforms), false);
 
     if(m_useVoxels) {
+        auto sceneSize = m_scene->getSize();
+        m_numVoxels.x = static_cast<int>(glm::pow(2.0f, glm::round(glm::log2(sceneSize.x / m_avgVoxelSize))));
+        m_numVoxels.y = static_cast<int>(glm::pow(2.0f, glm::round(glm::log2(sceneSize.y / m_avgVoxelSize))));
+        m_numVoxels.z = static_cast<int>(glm::pow(2.0f, glm::round(glm::log2(sceneSize.z / m_avgVoxelSize))));
         auto totalVoxels = m_numVoxels.x * m_numVoxels.y * m_numVoxels.z;
         m_descriptorSets[3].addBuffer("VoxelCount", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, (totalVoxels + 2) * sizeof(uint32_t), false);
         m_descriptorSets[3].addBuffer("VoxelFill", VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, totalVoxels * sizeof(uint32_t), false);
@@ -273,6 +277,9 @@ void Renderer::recordComputeCommandBuffer() {
             case computeSimple:
                 dispatchComputeSimple(step.getComputeSize());
                 break;
+            case computeIterated:
+                dispatchComputeIterated(step.getNumIterations(), step.getComputeSize(), step.getPipelineLayout());
+                break;
             case computeCascaded:
                 //numInvocations is the total number of voxels
                 dispatchComputeCascaded(glm::log2(numInvocations)-1, numInvocations/2, 2, true);
@@ -299,6 +306,30 @@ void Renderer::dispatchComputeSimple(uint32_t numInvocations) {
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
             VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
             0, 1, &barrier, 0, nullptr, 0, nullptr);
+}
+
+void Renderer::dispatchComputeIterated(uint32_t numIterations, uint32_t numInvocations, VkPipelineLayout pipelineLayout) {
+    uint32_t groupCount = (numInvocations+32-1)/32;
+
+    VkMemoryBarrier barrier{};
+    barrier.sType = VK_STRUCTURE_TYPE_MEMORY_BARRIER;
+    barrier.srcAccessMask = VK_ACCESS_SHADER_WRITE_BIT;
+    barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+
+    SceneNodeConstants constants{
+        glm::mat4(1.0f), 0
+    };
+
+    for(uint32_t i=0; i<numIterations; i++) {
+        constants.currentIndex = i;
+        vkCmdPushConstants(m_computeCommandBuffers[m_currentFrame % m_numSwapChainImages], pipelineLayout, VK_SHADER_STAGE_COMPUTE_BIT, 0, sizeof(SceneNodeConstants), &constants);
+        vkCmdDispatch(m_computeCommandBuffers[m_currentFrame % m_numSwapChainImages], groupCount, 1, 1);
+        vkCmdPipelineBarrier(
+            m_computeCommandBuffers[m_currentFrame % m_numSwapChainImages],
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            VK_PIPELINE_STAGE_COMPUTE_SHADER_BIT,
+            0, 1, &barrier, 0, nullptr, 0, nullptr);
+    }
 }
 
 void Renderer::dispatchComputeCascaded(uint32_t numIterations, uint32_t initialWorkGroup, uint32_t workGroupFactor, bool push) {

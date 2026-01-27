@@ -50,6 +50,24 @@ void PlantRenderer::setUpRenderSteps() {
     m_computeSteps.back().initComputeStep();
 
     m_computeSteps.emplace_back(m_context, m_numSwapChainImages);
+    m_computeSteps.back().setName("Accumulate Module Resources");
+    m_computeSteps.back().createShaderModules(
+        {"plants/accumulateModuleResources.comp"},
+        m_descriptorSets, sceneCounts);
+    m_computeSteps.back().setComputeMode(computeIterated, m_scene->getMaxPlantModules());
+    m_computeSteps.back().setNumIterations(m_scene->getMaxModuleOrder()+1);
+    m_computeSteps.back().initComputeStep();
+
+    m_computeSteps.emplace_back(m_context, m_numSwapChainImages);
+    m_computeSteps.back().setName("Distribute Module Resources");
+    m_computeSteps.back().createShaderModules(
+        {"plants/distributeModuleResources.comp"},
+        m_descriptorSets, sceneCounts);
+    m_computeSteps.back().setComputeMode(computeIterated, m_scene->getMaxPlantModules());
+    m_computeSteps.back().setNumIterations(m_scene->getMaxModuleOrder()+1);
+    m_computeSteps.back().initComputeStep();
+
+    m_computeSteps.emplace_back(m_context, m_numSwapChainImages);
     m_computeSteps.back().setName("Update Plant Modules");
     m_computeSteps.back().createShaderModules(
         {"plants/updatePlantModules.comp"},
@@ -83,6 +101,7 @@ void PlantRenderer::setUpRenderSteps() {
     m_renderSteps.back().setPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
     m_renderSteps.back().initRenderStep(m_renderOutput[0], 0);
 
+    /*
     m_renderSteps.emplace_back(m_context, m_numSwapChainImages);
     m_renderSteps.back().setName("Visualize Voxels");
     m_renderSteps.back().createShaderModules(
@@ -91,4 +110,5 @@ void PlantRenderer::setUpRenderSteps() {
     m_renderSteps.back().setRenderMode(renderInstancedPoint, m_numVoxels.x * m_numVoxels.y * m_numVoxels.z);
     m_renderSteps.back().setPrimitiveTopology(VK_PRIMITIVE_TOPOLOGY_POINT_LIST);
     m_renderSteps.back().initRenderStep(m_renderOutput[0], 0);
+    */
 }

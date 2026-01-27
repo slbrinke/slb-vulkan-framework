@@ -4,6 +4,7 @@
 #include <vector>
 #include <random>
 #include <stdexcept>
+#include <iostream>
 
 #include <glm/ext.hpp>
 
@@ -48,12 +49,17 @@ struct Module {
     glm::vec3 position; /**< Origin of the module in world coordinates */
     uint32_t status; /**< State of the module within its lifetime */
     glm::vec4 rotation; /**< Rotation of the module in world coordinates */
-    glm::vec3 center;
+    glm::vec3 center; /**< Center of all branch and bud positions in the local coordinates of the module */
     float radius; /**< Radius of the sphere encompassing the module at its current size */
     float age; /**< Time passed since module creation in simulated seconds */
-    float vigor;
+    float maxFlux; /**< Maximum approximated flux received by any child module down the hierarchy */
+    float vigor; /**< Resource value characterizing the current state of the module */
+    uint32_t order = 0; /**< Depth within the module hierarchy */
     uint32_t speciesIndex; /**< Index of the plant species within the uniform buffer */
     uint32_t prototypeIndex; /**< Index of the module prototype within the uniform buffer */
+    uint32_t parentIndex = 0; /**< Index of the parent module within the module buffer */
+    uint32_t numChildren = 0; /**< Number of child modules originating from this module */
+    uint32_t childIndices[8]; /**< Indices of the child modules within the module buffer */
 };
 
 /**
@@ -64,9 +70,12 @@ struct Module {
  */
 struct Prototype {
     float lambda; /**< Amount of growth directed along the main axis relative to branching axes */
-    float determinacy; /**< Temporarily not in use!!! */
+    //float determinacy; /**< Temporarily not in use!!! */
     uint32_t numNodes; /**< Total number of nodes */
     uint32_t firstNode; /**< First index of the nodes representing branch segments in the node buffer */
+    uint32_t numBuds; /**< Number of terminal nodes (buds) child modules can be attached to */
+    uint32_t budIndices[32]; /**< Indices of the terminal nodes in the node buffer */
+    float budWeights[32]; /**< Lambda values of the terminal nodes accumulated through the prototype hierarchy */
 };
 
 /**
@@ -121,6 +130,8 @@ public:
      */
     SpeciesUniforms getUniformData();
 
+    uint32_t getMaxModuleOrder();
+
     /**
      * Assign an index to the plant species.
      * 
@@ -172,6 +183,19 @@ public:
     uint32_t createModules(std::vector<Module> &modules);
 
 private:
+    /**
+     * Accumulate branch weights within a module prototype.
+     * 
+     * The node structure of a prototype is iterated to multiply the lambda values.
+     * 
+     * @param listIndex index of a branch segment within the node buffer
+     * @param nodes list of all nodes comprising the module prototypes
+     * @param prototypeIndex index of a prototype within the prototype buffer
+     * @param prototypes list of all prototypes modules can be assigned
+     * @return amount of resources directed towards a node relative to the module prototype
+     */
+    float listIndexToNodeWeight(uint32_t listIndex, std::vector<Node> &nodes, uint32_t prototypeIndex, std::vector<Prototype> &prototypes);
+
     uint32_t m_index = std::numeric_limits<uint32_t>::max(); /**< Unique index identifying the plant species in the scene */
 
     uint32_t m_numPlants = 0; /**< Number of plants of this species */
@@ -182,9 +206,10 @@ private:
     float m_maxAge = 3.0f; /**< Maximum age at which a module stops growing */
     float m_growthSpeed = 0.3f; /**< Growth rate in world scale per simulated second */
     float m_lambda = 0.5f; /**< Amount of growth directed along the main axis relative to branching axes */
+    uint32_t m_maxModuleOrder = 5; /**< Maximum depth of the plant hierarchy in number of modules */
 
     uint32_t m_numPrototypes = 3; /**< Number of prototypes defined for this species */
-    uint32_t m_maxOrder = 4; /**< Maximum branching depth within a module */
+    uint32_t m_maxNodeOrder = 4; /**< Maximum branching depth within a module */
     uint32_t m_maxChildren = 2; /**< Maximum number of child branches sprouting out from a branch segment */
 
     float m_minBranchLength = 0.01f; /**< Minimum length of a branch segment */

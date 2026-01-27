@@ -1,0 +1,128 @@
+#version 450
+
+layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
+
+#include Renderer
+#include Simulation
+#include SceneCounts
+#include PlantModules
+#include VoxelCount
+#include VoxelData
+#include SceneNodeConstants
+
+uint voxelToListIndex(ivec3 voxelIndex) {
+    uint listIndex = 0;
+    listIndex += voxelIndex.x;
+    listIndex += voxelIndex.y * simulation.numVoxels.x;
+    listIndex += voxelIndex.z * (simulation.numVoxels.x * simulation.numVoxels.y);
+    return listIndex;
+}
+
+mat4 getModelMatrix(vec3 pos, vec4 rot, float scale) {
+    //scale
+    mat4 mS = scale * mat4(1.0);
+    mS[3][3] = 1.0;
+    //rotate
+    mat4 mR = transpose(mat4(
+        1.0 - 2.0*rot.y*rot.y - 2.0*rot.z*rot.z, 2.0*rot.x*rot.y - 2.0*rot.w*rot.z, 2.0*rot.x*rot.z + 2.0*rot.w*rot.y, 0.0,
+        2.0*rot.x*rot.y + 2.0*rot.w*rot.z, 1.0 - 2.0*rot.x*rot.x - 2.0*rot.z*rot.z, 2.0*rot.y*rot.z - 2.0*rot.w*rot.x, 0.0,
+        2.0*rot.x*rot.z - 2.0*rot.w*rot.y, 2.0*rot.y*rot.z + 2.0*rot.w*rot.x, 1.0 - 2.0*rot.x*rot.x - 2.0*rot.y*rot.y, 0.0,
+        0.0, 0.0, 0.0, 1.0
+    ));
+    //translate
+    mat4 mT = mat4(1.0);
+    mT[3] = vec4(pos, 1.0);
+    return mT * mR * mS;
+}
+
+float getSphereOverlap(float pointDistance, float radius1, float radius2) {
+    float overlap = 0.0;
+    if(pointDistance < radius1 + radius2) { //spheres overlap in some way
+        float d = pointDistance;
+        float r1 = min(radius1, radius2);
+        float r2 = radius1 + radius2 - r1;
+
+        if(r1 + d < r2) { //sphere 1 entirely within spere 2
+            overlap = (4.0 / 3.0) * renderer.pi * r1*r1*r1;
+        } else {
+            float d1 = (r1*r1-r2*r2+d*d) / (2.0*d);
+            float d2 = d - d1;
+            //float h = sqrt(r1*r1-d1*d1);
+
+            overlap += (2.0 / 3.0) * renderer.pi *r2*r2*r2 * (1.0 - (d2 / r2)); //add sector of sphere 2
+            overlap -= (1.0 / 3.0) * renderer.pi * (r1*r1-d1*d1) * d2; //subtract cone of sphere 2
+
+            if(d1 > 0.0) {
+                overlap += (2.0 / 3.0) * renderer.pi *r1*r1*r1 * (1.0 - (d1 / r1)); //add sector of sphere 1
+                overlap -= (1.0 / 3.0) * renderer.pi * (r1*r1-d1*d1) * d1; //subtract cone of sphere 1
+            } else {
+                overlap += renderer.pi * ((2.0 / 3.0) * r1*r1*r1 - r1*r1*d1 + (1.0 / 3.0) * d1*d1*d1); //integrate sphere 1 from radius d1 (<0) to r1
+            }
+        }
+    }
+
+    return overlap;
+}
+
+float getIntersectionVolume(uint moduleIndex) {
+    float volume = 0.0;
+    vec3 modulePos = vec3(getModelMatrix(prevModules[moduleIndex].position, prevModules[moduleIndex].rotation, 1.0) * vec4(prevModules[moduleIndex].center, 1.0));
+    float moduleRad = prevModules[moduleIndex].radius;
+
+    int minX = min(max(int(((modulePos.x - moduleRad) / simulation.sceneSize.x + 0.5) * float(simulation.numVoxels.x)), 0), simulation.numVoxels.x-1);
+    int maxX = min(max(int(((modulePos.x + moduleRad) / simulation.sceneSize.x + 0.5) * float(simulation.numVoxels.x)), 0), simulation.numVoxels.x-1);
+    for(int x=minX; x<=maxX; x++) {
+        float voxX = min(
+            abs(modulePos.x - (-0.5 * simulation.sceneSize.x + float(x) * simulation.voxelSize.x)),
+            abs(modulePos.x - (-0.5 * simulation.sceneSize.x + float(x+1) * simulation.voxelSize.x)));
+        float currRad = sqrt(voxX*voxX + moduleRad*moduleRad);
+        int minY = min(max(int(((modulePos.y - currRad) / simulation.sceneSize.y + 0.5) * float(simulation.numVoxels.y)), 0), simulation.numVoxels.y-1);
+        int maxY = min(max(int(((modulePos.y + currRad) / simulation.sceneSize.y + 0.5) * float(simulation.numVoxels.y)), 0), simulation.numVoxels.y-1);
+        for(int y=minY; y<=maxY; y++) {
+            int minZ = min(max(int(((modulePos.z - currRad) / simulation.sceneSize.z + 0.5) * float(simulation.numVoxels.z)), 0), simulation.numVoxels.z-1);
+            int maxZ = min(max(int(((modulePos.z + currRad) / simulation.sceneSize.z + 0.5) * float(simulation.numVoxels.z)), 0), simulation.numVoxels.z-1);
+            for(int z=minZ; z<=maxZ; z++) {
+                //check all modules in this voxel
+                uint voxelListIndex = voxelToListIndex(ivec3(x, y, z));
+                uint voxelOffset = voxelCount[voxelListIndex];
+                uint numModules = voxelCount[voxelListIndex+1] - voxelOffset;
+                for(uint m=0; m<numModules; m++) {
+                    uint neighborIndex = voxelData[voxelOffset+m];
+                    if(neighborIndex != moduleIndex) {
+                        vec3 neighborPos = vec3(getModelMatrix(prevModules[neighborIndex].position, prevModules[neighborIndex].rotation, 1.0) * vec4(prevModules[neighborIndex].center, 1.0));
+                        volume += getSphereOverlap(distance(modulePos, neighborPos), moduleRad, prevModules[neighborIndex].radius);
+                    }
+                }
+            }
+        }
+    }
+
+    return volume;
+}
+
+void main() {
+    uint moduleIndex = gl_GlobalInvocationID.x;
+    uint moduleOrder = prevSceneCounts[10] - currentIndex;
+
+    if(prevModules[moduleIndex].status > 0 && prevModules[moduleIndex].order == moduleOrder) {
+        Module module = prevModules[moduleIndex];
+
+        float intersection = getIntersectionVolume(moduleIndex);
+        float exposure = exp(-intersection);
+        
+        float flux = exposure;
+        float maxFlux = flux;
+        //float maxFlux = 0.0;
+        for(int c=0; c<module.numChildren; c++) {
+            if(prevModules[module.childIndices[c]].status > 0) {
+                float childFlux = prevModules[module.childIndices[c]].vigor;
+                flux += childFlux;
+                maxFlux = max(maxFlux, childFlux);
+            }
+        }
+
+        prevModules[moduleIndex].vigor = flux; //store in vigor for now
+        prevModules[moduleIndex].maxFlux = maxFlux;
+        
+    }
+}

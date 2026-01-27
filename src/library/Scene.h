@@ -26,10 +26,17 @@ public:
     Scene(std::shared_ptr<Camera> &camera);
     ~Scene() = default;
 
+    /**
+     * Return the total size of the space occupied by elements of the scene.
+     * 
+     * The center is assumed to be at world origin.
+     * 
+     * @return scene size in world coordinates
+     */
     glm::vec3 getSize();
 
     /**
-     * Change the background color the scene is displayed in front of.
+     * Return the background color the scene is displayed in front of.
      * 
      * @return background color in rgb format
      */
@@ -50,6 +57,13 @@ public:
     uint32_t getMaxPlantModules();
 
     /**
+     * Return the maximum module order among all plant species.
+     * 
+     * @return maximum tree depth in number of modules
+     */
+    uint32_t getMaxModuleOrder();
+
+    /**
      * Return the maximum number of branch segments in the scene.
      * 
      * It is an upper bound estimated from the maximum number of nodes in a prototype and the maximum number of plant modules.
@@ -58,6 +72,14 @@ public:
      */
     uint32_t getNumBranches();
 
+    /**
+     * Change the total size of the scene.
+     * 
+     * The center is assumed to be at world origin.
+     * This overrides the value updated based on the meshes placed in the scene.
+     * 
+     * @param size scene size in world coordinates
+     */
     void setSize(glm::vec3 size);
 
     /**
@@ -181,7 +203,7 @@ private:
 
     std::shared_ptr<Camera> m_camera; /**< Pointer to the camera viewing the scene */
 
-    glm::vec3 m_size{1.0f};
+    glm::vec3 m_size{1.0f}; /**< Size of the total space occupied in world coordinates */
     glm::vec3 m_backgroundColor{0.43f, 0.38f, 0.3f}; /**< Color displayed in the background of the scene */
 
     std::unique_ptr<SceneNode> m_rootNode; /**< Root node of the scene graph */
@@ -211,6 +233,7 @@ private:
     uint32_t m_numPlantModules = 0; /**< Number of initialized plant modules of all plant species */
     std::vector<Module> m_plantModules; /**< List of plant modules for all plant species */
     uint32_t m_maxPlantModules = 30; /**< Size of the plant module buffer */
+    uint32_t m_maxModuleOrder = 0; /**< Maximum plant hierarchy depth in number of modules over all defined species */
     uint32_t m_maxNodesPerModule = 0; /**< Maximum number of nodes contained in any of the plant module prototypes */
 
 };

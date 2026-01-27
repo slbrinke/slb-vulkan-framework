@@ -324,9 +324,17 @@ uint32_t ComputeStep::getComputeSize() {
     return m_computeSize;
 }
 
+uint32_t ComputeStep::getNumIterations() {
+    return m_numIterations;
+}
+
 void ComputeStep::setComputeMode(ComputeMode mode, uint32_t size) {
     m_computeMode = mode;
     m_computeSize = size;
+}
+
+void ComputeStep::setNumIterations(uint32_t numIterations) {
+    m_numIterations = numIterations;
 }
 
 void ComputeStep::createShaderModules(const std::vector<std::string> &shaderFiles, std::vector<DescriptorSet> &descriptorSets, std::vector<uint32_t> &sceneCounts) {
@@ -359,7 +367,7 @@ void ComputeStep::initComputeStep() {
 
     //push constants
     std::vector<VkPushConstantRange> pushConstants(1);
-    pushConstants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT | VK_SHADER_STAGE_FRAGMENT_BIT;
+    pushConstants[0].stageFlags = VK_SHADER_STAGE_COMPUTE_BIT;
     pushConstants[0].offset = 0;
     pushConstants[0].size = sizeof(SceneNodeConstants);
     pipelineLayoutInfo.pushConstantRangeCount = pushConstants.size();

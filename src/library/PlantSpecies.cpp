@@ -11,12 +11,15 @@ uint32_t PlantSpecies::getIndex() {
 SpeciesUniforms PlantSpecies::getUniformData() {
     SpeciesUniforms speciesUniforms{};
     speciesUniforms.numPrototypes = m_numPrototypes;
-    speciesUniforms.maxAge = m_maxAge;
     speciesUniforms.growthSpeed = m_growthSpeed;
-    speciesUniforms.maxChildren = m_maxChildren;
+    speciesUniforms.maxModuleAge = m_maxAge;
+    speciesUniforms.maxModuleOrder = m_maxModuleOrder;
+    speciesUniforms.maxNodeAge = m_maxAge / static_cast<float>(m_maxModuleOrder+1);
+    speciesUniforms.maxNodeChildren = m_maxChildren;
     speciesUniforms.minExtent = m_minBranchLength;
     speciesUniforms.maxExtent = m_maxBranchLength;
     speciesUniforms.minRadius = m_minBranchRadius;
+    speciesUniforms.maxRadius = m_minBranchRadius; //TO DO: find a value that makes sense
     for(int c=0; c<5; c++) {
         speciesUniforms.sizeDecrease[4*c] = m_branchSizeDecrease[c];
         speciesUniforms.branchingThetas[4*c] = m_branchingThetas[c];
@@ -44,7 +47,7 @@ void PlantSpecies::addPlant(glm::vec3 position, float initialAge, glm::vec3 dire
 uint32_t PlantSpecies::getMaxNodesPerPrototype() {
     uint32_t base = 1;
     uint32_t sum = 0;
-    for(uint32_t l=0; l<m_maxNodeOrder; l++) {
+    for(uint32_t l=0; l<=m_maxNodeOrder; l++) {
         sum += base;
         base *= m_maxChildren;
     }
@@ -62,20 +65,20 @@ uint32_t PlantSpecies::createPrototypes(std::vector<Prototype> &prototypes, uint
         //prototypes[firstPrototype+p].determinacy = 0.0f;
         
         uint32_t nodeOffset = firstNode;
-        uint32_t maxOffset = 1 + static_cast<uint32_t>((1.0f - lambda) * static_cast<float>(glm::pow(m_maxChildren, m_maxNodeOrder-1) - 1));
+        uint32_t maxOffset = 1 + static_cast<uint32_t>((1.0f - lambda) * static_cast<float>(glm::pow(m_maxChildren, m_maxNodeOrder) - 1));
         uint32_t offset, numEmpty = 0;
         uint32_t base = 1;
-        for(uint32_t l=0; l<m_maxNodeOrder; l++) {
+        for(uint32_t l=0; l<=m_maxNodeOrder; l++) {
             offset = glm::min(base, maxOffset);
             nodes.resize(nodeOffset + offset);
             for(uint32_t o=0; o<offset; o++) {
                 nodes[nodeOffset+o].status = 1;
-                nodes[nodeOffset+o].age = m_maxAge * (1.0f - (static_cast<float>(l) / static_cast<float>(m_maxNodeOrder)));
+                nodes[nodeOffset+o].age = m_maxAge * (1.0f - (static_cast<float>(l) / static_cast<float>(m_maxNodeOrder+1)));
                 nodes[nodeOffset+o].order = l;
                 if(l > 0) {
                     nodes[nodeOffset+o].parentIndex = nodeOffset - (base / m_maxChildren - numEmpty) + (o / m_maxChildren);
                 }
-                if(l < m_maxNodeOrder-1) {
+                if(l < m_maxNodeOrder) {
                     for(uint32_t c=0; c<m_maxChildren; c++) {
                         if(o*m_maxChildren+c < glm::min(base*m_maxChildren, maxOffset)) {
                             nodes[nodeOffset+o].childIndices[c] = nodeOffset + offset + o * m_maxChildren + c;

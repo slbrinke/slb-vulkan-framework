@@ -29,7 +29,7 @@ mat4 getModelMatrix(vec3 pos, vec4 rot, float scale) {
 }
 
 bool listIndexToBudModel(uint listIndex, uint speciesIndex, uint prototypeIndex, mat4 moduleModel, out mat4 budModel) {
-    uint maxChildren = plantSpecies[speciesIndex].maxChildren;
+    uint maxChildren = plantSpecies[speciesIndex].maxNodeChildren;
     uint rootIndex = plantPrototypes[prototypeIndex].firstNode;
     uint currIndex = listIndex;
 
@@ -159,7 +159,7 @@ void main() {
             //moduleAge += growthRate * (simulation.elapsedTime - simulation.lastTime);
             module.age += module.vigor * plantSpecies[module.speciesIndex].growthSpeed * simulation.deltaTime;
 
-            if(module.age >= plantSpecies[module.speciesIndex].maxAge) {
+            if(module.age >= plantSpecies[module.speciesIndex].maxModuleAge) {
                 module.status = 2;
             }
 
@@ -177,7 +177,7 @@ void main() {
                         prevModules[addedIndex].position = vec3(budModel * vec4(0.0, 0.0, 0.0, 1.0));
                         prevModules[addedIndex].rotation = nodeModelToModuleRotation(budModel);
                         prevModules[addedIndex].status = 1;
-                        prevModules[addedIndex].age = plantSpecies[module.speciesIndex].maxAge * simulation.deltaTime;
+                        prevModules[addedIndex].age = plantSpecies[module.speciesIndex].maxModuleAge * simulation.deltaTime;
                         prevModules[addedIndex].vigor = 1.0;
                         prevModules[addedIndex].order = module.order + 1;
                         prevModules[addedIndex].speciesIndex = module.speciesIndex;

@@ -14,7 +14,7 @@ layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 /*
 bool listIndexToChildModel(uint moduleIndex, uint listIndex, out mat4 nodeModel) {
     uint speciesIndex = prevModules[moduleIndex].speciesIndex;
-    uint maxChildren = plantSpecies[speciesIndex].maxChildren;
+    uint maxChildren = plantSpecies[speciesIndex].maxNodeChildren;
     uint rootIndex = plantPrototypes[prevModules[moduleIndex].prototypeIndex].firstNode;
     uint currIndex = listIndex;
 
@@ -101,7 +101,7 @@ bool listIndexToChildModel(uint moduleIndex, uint listIndex, out mat4 nodeModel)
 
 bool listIndexToBudPos(uint moduleIndex, uint listIndex, out vec3 budPos) {
     uint speciesIndex = prevModules[moduleIndex].speciesIndex;
-    uint maxChildren = plantSpecies[speciesIndex].maxChildren;
+    uint maxChildren = plantSpecies[speciesIndex].maxNodeChildren;
     uint rootIndex = plantPrototypes[prevModules[moduleIndex].prototypeIndex].firstNode;
     uint currIndex = listIndex;
 
@@ -125,18 +125,19 @@ bool listIndexToBudPos(uint moduleIndex, uint listIndex, out vec3 budPos) {
         currIndex = currNodes[currIndex].parentIndex;
     }
 
+    float nodeAge = prevModules[moduleIndex].age / plantSpecies[speciesIndex].maxNodeAge;
     vec3 xAxis = vec3(1.0, 0.0, 0.0);
     vec3 yAxis = vec3(0.0, 1.0, 0.0);
     vec3 zAxis = vec3(0.0, 0.0, 1.0);
     float extent = plantSpecies[speciesIndex].maxExtent;
-    vec3 position = extent * yAxis;
+    vec3 position = min(nodeAge, 1.0) * extent * yAxis;
 
     for(uint l=0; l<level; l++) {
         base /= maxChildren;
         uint child = offset / base;
         offset -= child * base;
 
-        if(child >= currNodes[currIndex].numChildren) {
+        if(nodeAge < 1.0 || child >= currNodes[currIndex].numChildren) {
             return false;
         }
         currIndex = currNodes[currIndex].childIndices[child];
@@ -161,7 +162,8 @@ bool listIndexToBudPos(uint moduleIndex, uint listIndex, out vec3 budPos) {
             xAxis = normalize(cross(yAxis, zAxis));
         }
         extent *= plantSpecies[speciesIndex].sizeDecrease[child];
-        position += extent * yAxis;
+        nodeAge = (prevModules[moduleIndex].age - (float(currNodes[currIndex].order) * plantSpecies[speciesIndex].maxNodeAge)) / plantSpecies[speciesIndex].maxNodeAge;
+        position += min(nodeAge, 1.0) * extent * yAxis;
     }
 
     budPos = position;
@@ -170,13 +172,13 @@ bool listIndexToBudPos(uint moduleIndex, uint listIndex, out vec3 budPos) {
 
 void updateBoundingSphere(uint moduleIndex, out vec3 bsCenter, out float bsRadius) {
     uint prototypeIndex = prevModules[moduleIndex].prototypeIndex;
-    float relAge = plantSpecies[prevModules[moduleIndex].speciesIndex].maxAge - prevModules[moduleIndex].age;
+    float relAge = plantSpecies[prevModules[moduleIndex].speciesIndex].maxModuleAge - prevModules[moduleIndex].age;
     vec3 budPos = vec3(0.0);
     vec3 budMin = vec3(0.0);
     vec3 budMax = vec3(0.0);
     for(uint n=0; n<plantPrototypes[prototypeIndex].numNodes; n++) {
         uint listIndex = plantPrototypes[prototypeIndex].firstNode + n;
-        if(currNodes[listIndex].age >= relAge && listIndexToBudPos(moduleIndex, listIndex, budPos)) {
+        if(listIndexToBudPos(moduleIndex, listIndex, budPos)) {
             budMin = min(budMin, budPos);
             budMax = max(budMax, budPos);
         }
@@ -186,7 +188,7 @@ void updateBoundingSphere(uint moduleIndex, out vec3 bsCenter, out float bsRadiu
     float maxDistSq = dot(budDist, budDist);
     for(uint n=0; n<plantPrototypes[prototypeIndex].numNodes; n++) {
         uint listIndex = plantPrototypes[prototypeIndex].firstNode + n;
-        if(currNodes[listIndex].age >= relAge && listIndexToBudPos(moduleIndex, listIndex, budPos)) {
+        if(listIndexToBudPos(moduleIndex, listIndex, budPos)) {
             budDist = budPos - bsCenter;
             maxDistSq = max(maxDistSq, dot(budDist, budDist));
         }

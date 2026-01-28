@@ -18,7 +18,7 @@ layout(location = 2) out mat4 passNodeModel;
 
 bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel, out float nodeExtent) {
     uint speciesIndex = currModules[moduleIndex].speciesIndex;
-    uint maxChildren = plantSpecies[speciesIndex].maxChildren;
+    uint maxChildren = plantSpecies[speciesIndex].maxNodeChildren;
 
     uint level = 0;
     uint base = 1;
@@ -29,6 +29,7 @@ bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel, 
         level++;
     }
 
+    float nodeAge = currModules[moduleIndex].age / plantSpecies[speciesIndex].maxNodeAge;
     vec3 position = currModules[moduleIndex].position;
     vec4 modRot = currModules[moduleIndex].rotation;
     vec3 xAxis = vec3(
@@ -51,13 +52,13 @@ bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel, 
         uint child = offset / base;
         offset -= child * base;
 
-        if(child >= currNodes[listIndex].numChildren
-            || currModules[moduleIndex].age < plantSpecies[speciesIndex].maxAge - currNodes[currNodes[listIndex].childIndices[child]].age) {
+        if(nodeAge < 1.0 || child >= currNodes[listIndex].numChildren) {
             return false;
         }
         listIndex = currNodes[listIndex].childIndices[child];
 
-        position += extent * yAxis;
+        position += min(nodeAge, 1.0) * extent * yAxis;
+        nodeAge = (currModules[moduleIndex].age - (float(currNodes[listIndex].order) * plantSpecies[speciesIndex].maxNodeAge)) / plantSpecies[speciesIndex].maxNodeAge;
         extent *= plantSpecies[speciesIndex].sizeDecrease[child];
         float theta = plantSpecies[speciesIndex].branchingThetas[child];
         float phi = plantSpecies[speciesIndex].branchingPhis[child];
@@ -90,7 +91,7 @@ bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel, 
         //    0.0, extent, 0.0, 0.0,
         //    0.0, 0.0, radius, 0.0,
         //    0.0, 0.0, 0.0, 1.0));
-    nodeExtent = extent;
+    nodeExtent = min(nodeAge, 1.0) * extent;
     return true;
 }
 
@@ -108,7 +109,7 @@ void main() {
         }
 
         gl_Position = camera.projection * camera.view * nodeModel * vec4(0.0, 0.0, 0.0, 1.0);
-        passSize = vec3(module.age / plantSpecies[module.speciesIndex].maxAge, extent, plantSpecies[module.speciesIndex].minRadius);
+        passSize = vec3(module.age / plantSpecies[module.speciesIndex].maxModuleAge, extent, plantSpecies[module.speciesIndex].minRadius);
         passSpeciesIndex = module.speciesIndex;
         passNodeModel = nodeModel;
     }

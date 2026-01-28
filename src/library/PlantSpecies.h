@@ -17,19 +17,23 @@
 struct SpeciesUniforms {
     uint32_t numPrototypes; /**< Total number of module prototypes */
     uint32_t firstPrototype; /**< First index of the module prototypes within the prototypes uniform buffer */
-    float maxAge; /**< Maximum age at which a module stops growing */
     float growthSpeed; /**< Growth rate in world scale per simulated second */
-    uint32_t maxChildren; /**< Maximum number of child branches sprouting out from a branch segment */
+    float maxModuleAge; /**< Maximum age at which a module stops growing */
+    uint32_t maxModuleOrder; /**< Maximum order a module can have in the hierarchy */
+    float maxNodeAge; /**< Maximum age at which a branch segment stops growing */
+    uint32_t maxNodeChildren; /**< Maximum number of child branches sprouting out from a branch segment */
     float minExtent; /**< Minimum length of a branch segment */
     float maxExtent; /**< Maximum length of a branch segment */
     float minRadius; /**< Minimum radius of a branch segment */
+    float maxRadius; /**< Maximum radius of a branch segment */
+    float pad1;
     float sizeDecrease[20]; /**< Length of each child branch segment in relation to the parent branch segment length */
     float branchingThetas[20]; /**< Vertical branching angle of each child branch segment relative to the orientation of the parent */
     float branchingPhis[20]; /**< Horizontal branching angle of each child branch segment relative to the orientation of the parent */
     float gravitropsim; /**< Strength of the impact of gravity on branch segments */
-    float pad1;
     float pad2;
     float pad3;
+    float pad4;
 };
 
 /**
@@ -209,7 +213,7 @@ private:
     uint32_t m_maxModuleOrder = 5; /**< Maximum depth of the plant hierarchy in number of modules */
 
     uint32_t m_numPrototypes = 3; /**< Number of prototypes defined for this species */
-    uint32_t m_maxNodeOrder = 4; /**< Maximum branching depth within a module */
+    uint32_t m_maxNodeOrder = 3; /**< Maximum branching depth within a module */
     uint32_t m_maxChildren = 2; /**< Maximum number of child branches sprouting out from a branch segment */
 
     float m_minBranchLength = 0.01f; /**< Minimum length of a branch segment */

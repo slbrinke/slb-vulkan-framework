@@ -29,15 +29,23 @@ bool positionToVoxelIndex(vec3 position, out ivec3 voxelIndex) {
     return true;
 }
 
-mat4 getModelMatrix(vec3 pos, vec4 rot, float scale) {
+mat4 getModelMatrix(vec3 pos, vec3 rot, float scale) {
     //scale
     mat4 mS = scale * mat4(1.0);
     mS[3][3] = 1.0;
     //rotate
+    /*
     mat4 mR = transpose(mat4(
         1.0 - 2.0*rot.y*rot.y - 2.0*rot.z*rot.z, 2.0*rot.x*rot.y - 2.0*rot.w*rot.z, 2.0*rot.x*rot.z + 2.0*rot.w*rot.y, 0.0,
         2.0*rot.x*rot.y + 2.0*rot.w*rot.z, 1.0 - 2.0*rot.x*rot.x - 2.0*rot.z*rot.z, 2.0*rot.y*rot.z - 2.0*rot.w*rot.x, 0.0,
         2.0*rot.x*rot.z - 2.0*rot.w*rot.y, 2.0*rot.y*rot.z + 2.0*rot.w*rot.x, 1.0 - 2.0*rot.x*rot.x - 2.0*rot.y*rot.y, 0.0,
+        0.0, 0.0, 0.0, 1.0
+    ));
+    */
+    mat4 mR = transpose(mat4(
+        cos(rot.y)*cos(rot.z), -cos(rot.y)*sin(rot.z), sin(rot.y), 0.0,
+        cos(rot.z)*sin(rot.x)*sin(rot.y)+cos(rot.x)*sin(rot.z), cos(rot.x)*cos(rot.z)-sin(rot.x)*sin(rot.y)*sin(rot.z), -cos(rot.y)*sin(rot.x), 0.0,
+        -cos(rot.x)*cos(rot.z)*sin(rot.y)+sin(rot.x)*sin(rot.z), cos(rot.z)*sin(rot.x)+cos(rot.x)*sin(rot.y)*sin(rot.z), cos(rot.x)*cos(rot.y), 0.0,
         0.0, 0.0, 0.0, 1.0
     ));
     //translate

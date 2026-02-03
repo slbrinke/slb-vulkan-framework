@@ -11,95 +11,57 @@ layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 #include VoxelCount
 #include VoxelData
 
-/*
-bool listIndexToChildModel(uint moduleIndex, uint listIndex, out mat4 nodeModel) {
-    uint speciesIndex = prevModules[moduleIndex].speciesIndex;
-    uint maxChildren = plantSpecies[speciesIndex].maxNodeChildren;
-    uint rootIndex = plantPrototypes[prevModules[moduleIndex].prototypeIndex].firstNode;
-    uint currIndex = listIndex;
-
-    uint level = 0;
-    uint base = 1;
-    uint offset = 0;
-    while(currIndex > rootIndex) {
-        uint child = 0;
-        while(currNodes[currNodes[currIndex].parentIndex].childIndices[child] != currIndex
-            && child < maxChildren) {
-            child++;
-        }
-        if(child >= currNodes[currNodes[currIndex].parentIndex].numChildren) {
-            return false;
-        }
-
-        offset += child * base;
-        base *= maxChildren;
-        level++;
-
-        currIndex = currNodes[currIndex].parentIndex;
-    }
-
-    vec3 position = prevModules[moduleIndex].position;
-    vec4 modRot = prevModules[moduleIndex].rotation;
-    vec3 xAxis = vec3(
-            1.0 - 2.0*modRot.y*modRot.y - 2.0*modRot.z*modRot.z,
-            2.0*modRot.x*modRot.y + 2.0*modRot.w*modRot.z,
-            2.0*modRot.x*modRot.z - 2.0*modRot.w*modRot.y);
-        vec3 yAxis = vec3(
-            2.0*modRot.x*modRot.y - 2.0*modRot.w*modRot.z,
-            1.0 - 2.0*modRot.x*modRot.x - 2.0*modRot.z*modRot.z,
-            2.0*modRot.y*modRot.z + 2.0*modRot.w*modRot.x);
-        vec3 zAxis = vec3(
-            2.0*modRot.x*modRot.z + 2.0*modRot.w*modRot.y,
-            2.0*modRot.y*modRot.z - 2.0*modRot.w*modRot.x,
-            1.0 - 2.0*modRot.x*modRot.x - 2.0*modRot.y*modRot.y);
-    float extent = plantSpecies[speciesIndex].maxExtent;
-
-    for(uint l=0; l<level; l++) {
-        base /= maxChildren;
-        uint child = offset / base;
-        offset -= child * base;
-
-        if(child >= currNodes[currIndex].numChildren) {
-            return false;
-        }
-        currIndex = currNodes[currIndex].childIndices[child];
-
-        position += extent * yAxis;
-        extent *= plantSpecies[speciesIndex].sizeDecrease[child];
-        float theta = plantSpecies[speciesIndex].branchingThetas[child];
-        float phi = plantSpecies[speciesIndex].branchingPhis[child];
-        float sinTheta = sin(theta);
-        if(theta > 0.001) {
-            yAxis = normalize(
-                cos(phi) * sinTheta * xAxis
-                + cos(theta) * yAxis
-                + sin(phi) * sinTheta * zAxis
-                + plantSpecies[speciesIndex].gravitropism * vec3(0.0, -1.0, 0.0));
-            xAxis = normalize(vec3(-yAxis.z, 0.0, yAxis.x));
-            zAxis = normalize(cross(xAxis, yAxis));
-        } else {
-            xAxis = normalize(
-                cos(phi) * xAxis
-                + sin(phi) * zAxis);
-            yAxis = normalize(yAxis + plantSpecies[speciesIndex].gravitropism * vec3(0.0, -1.0, 0.0));
-            zAxis = normalize(cross(xAxis, yAxis));
-            xAxis = normalize(cross(yAxis, zAxis));
-        }
-    }
-
-    //switch from branch origin to bud transform
-    position += extent * yAxis;
-
-    nodeModel = mat4(
-        vec4(xAxis, 0.0),
-        vec4(yAxis, 0.0),
-        vec4(zAxis, 0.0),
-        vec4(position, 1.0));
-    return true;
+uint voxelToListIndex(ivec3 voxelIndex) {
+    uint listIndex = 0;
+    listIndex += voxelIndex.x;
+    listIndex += voxelIndex.y * simulation.numVoxels.x;
+    listIndex += voxelIndex.z * (simulation.numVoxels.x * simulation.numVoxels.y);
+    return listIndex;
 }
-*/
 
-bool listIndexToBudPos(uint moduleIndex, uint listIndex, out vec3 budPos) {
+mat4 getModelMatrix(vec3 pos, vec3 rot, float scale) {
+    //scale
+    mat4 mS = scale * mat4(1.0);
+    mS[3][3] = 1.0;
+    //rotate
+    /*
+    mat4 mR = transpose(mat4(
+        1.0 - 2.0*rot.y*rot.y - 2.0*rot.z*rot.z, 2.0*rot.x*rot.y - 2.0*rot.w*rot.z, 2.0*rot.x*rot.z + 2.0*rot.w*rot.y, 0.0,
+        2.0*rot.x*rot.y + 2.0*rot.w*rot.z, 1.0 - 2.0*rot.x*rot.x - 2.0*rot.z*rot.z, 2.0*rot.y*rot.z - 2.0*rot.w*rot.x, 0.0,
+        2.0*rot.x*rot.z - 2.0*rot.w*rot.y, 2.0*rot.y*rot.z + 2.0*rot.w*rot.x, 1.0 - 2.0*rot.x*rot.x - 2.0*rot.y*rot.y, 0.0,
+        0.0, 0.0, 0.0, 1.0
+    ));
+    */
+    mat4 mR = transpose(mat4(
+        cos(rot.y)*cos(rot.z), -cos(rot.y)*sin(rot.z), sin(rot.y), 0.0,
+        cos(rot.z)*sin(rot.x)*sin(rot.y)+cos(rot.x)*sin(rot.z), cos(rot.x)*cos(rot.z)-sin(rot.x)*sin(rot.y)*sin(rot.z), -cos(rot.y)*sin(rot.x), 0.0,
+        -cos(rot.x)*cos(rot.z)*sin(rot.y)+sin(rot.x)*sin(rot.z), cos(rot.z)*sin(rot.x)+cos(rot.x)*sin(rot.y)*sin(rot.z), cos(rot.x)*cos(rot.y), 0.0,
+        0.0, 0.0, 0.0, 1.0
+    ));
+    //translate
+    mat4 mT = mat4(1.0);
+    mT[3] = vec4(pos, 1.0);
+    return mT * mR * mS;
+}
+
+mat4 getRotationMatrix(vec3 angles) {
+    return transpose(mat4(
+        cos(angles.z)*cos(angles.y), cos(angles.z)*sin(angles.y)*sin(angles.x)-sin(angles.z)*cos(angles.x), cos(angles.z)*sin(angles.y)*cos(angles.x)+sin(angles.z)*sin(angles.x), 0.0,
+        sin(angles.z)*cos(angles.y), sin(angles.z)*sin(angles.y)*sin(angles.x)+cos(angles.z)*cos(angles.x), sin(angles.z)*sin(angles.y)*cos(angles.x)-cos(angles.z)*sin(angles.x), 0.0,
+        -sin(angles.y), cos(angles.y)*sin(angles.x), cos(angles.y)*cos(angles.x), 0.0,
+        0.0, 0.0, 0.0, 1.0));
+}
+
+vec4 combineQuats(vec4 q1, vec4 q2) {
+    return vec4(
+        q1.w*q2.x + q1.x*q2.w + q1.y*q2.z - q1.z*q2.y,
+        q1.w*q2.y + q1.y*q2.w + q1.z*q2.x - q1.x*q2.z,
+        q1.w*q2.z + q1.z*q2.w + q1.x*q2.y - q1.y*q2.x,
+        q1.w*q2.w - q1.x*q2.x - q1.y*q2.y - q1.z*q2.z
+    );
+}
+
+bool listIndexToBudPos(uint moduleIndex, float moduleAge, uint listIndex, out vec3 budPos) {
     uint speciesIndex = prevModules[moduleIndex].speciesIndex;
     uint maxChildren = plantSpecies[speciesIndex].maxNodeChildren;
     uint rootIndex = plantPrototypes[prevModules[moduleIndex].prototypeIndex].firstNode;
@@ -125,7 +87,7 @@ bool listIndexToBudPos(uint moduleIndex, uint listIndex, out vec3 budPos) {
         currIndex = currNodes[currIndex].parentIndex;
     }
 
-    float nodeAge = prevModules[moduleIndex].age / plantSpecies[speciesIndex].maxNodeAge;
+    float nodeAge = moduleAge / plantSpecies[speciesIndex].maxNodeAge;
     vec3 xAxis = vec3(1.0, 0.0, 0.0);
     vec3 yAxis = vec3(0.0, 1.0, 0.0);
     vec3 zAxis = vec3(0.0, 0.0, 1.0);
@@ -162,7 +124,7 @@ bool listIndexToBudPos(uint moduleIndex, uint listIndex, out vec3 budPos) {
             xAxis = normalize(cross(yAxis, zAxis));
         }
         extent *= plantSpecies[speciesIndex].sizeDecrease[child];
-        nodeAge = (prevModules[moduleIndex].age - (float(currNodes[currIndex].order) * plantSpecies[speciesIndex].maxNodeAge)) / plantSpecies[speciesIndex].maxNodeAge;
+        nodeAge = (moduleAge - (float(currNodes[currIndex].order) * plantSpecies[speciesIndex].maxNodeAge)) / plantSpecies[speciesIndex].maxNodeAge;
         position += min(nodeAge, 1.0) * extent * yAxis;
     }
 
@@ -170,15 +132,15 @@ bool listIndexToBudPos(uint moduleIndex, uint listIndex, out vec3 budPos) {
     return true;
 }
 
-void updateBoundingSphere(uint moduleIndex, out vec3 bsCenter, out float bsRadius) {
+void updateBoundingSphere(uint moduleIndex, float moduleAge, out vec3 bsCenter, out float bsRadius) {
     uint prototypeIndex = prevModules[moduleIndex].prototypeIndex;
-    float relAge = plantSpecies[prevModules[moduleIndex].speciesIndex].maxModuleAge - prevModules[moduleIndex].age;
+    //float relAge = plantSpecies[prevModules[moduleIndex].speciesIndex].maxModuleAge - moduleAge;
     vec3 budPos = vec3(0.0);
     vec3 budMin = vec3(0.0);
     vec3 budMax = vec3(0.0);
     for(uint n=0; n<plantPrototypes[prototypeIndex].numNodes; n++) {
         uint listIndex = plantPrototypes[prototypeIndex].firstNode + n;
-        if(listIndexToBudPos(moduleIndex, listIndex, budPos)) {
+        if(listIndexToBudPos(moduleIndex, moduleAge, listIndex, budPos)) {
             budMin = min(budMin, budPos);
             budMax = max(budMax, budPos);
         }
@@ -188,12 +150,75 @@ void updateBoundingSphere(uint moduleIndex, out vec3 bsCenter, out float bsRadiu
     float maxDistSq = dot(budDist, budDist);
     for(uint n=0; n<plantPrototypes[prototypeIndex].numNodes; n++) {
         uint listIndex = plantPrototypes[prototypeIndex].firstNode + n;
-        if(listIndexToBudPos(moduleIndex, listIndex, budPos)) {
+        if(listIndexToBudPos(moduleIndex, moduleAge, listIndex, budPos)) {
             budDist = budPos - bsCenter;
             maxDistSq = max(maxDistSq, dot(budDist, budDist));
         }
     }
     bsRadius = sqrt(maxDistSq);
+}
+
+float getSphereOverlap(float pointDistance, float radius1, float radius2) {
+    float overlap = 0.0;
+    if(pointDistance < radius1 + radius2) { //spheres overlap in some way
+        float d = pointDistance;
+        float r1 = min(radius1, radius2);
+        float r2 = radius1 + radius2 - r1;
+
+        if(r1 + d < r2) { //sphere 1 entirely within spere 2
+            overlap = (4.0 / 3.0) * renderer.pi * r1*r1*r1;
+        } else {
+            float d1 = (r1*r1-r2*r2+d*d) / (2.0*d);
+            float d2 = d - d1;
+            //float h = sqrt(r1*r1-d1*d1);
+
+            overlap += (2.0 / 3.0) * renderer.pi *r2*r2*r2 * (1.0 - (d2 / r2)); //add sector of sphere 2
+            overlap -= (1.0 / 3.0) * renderer.pi * (r1*r1-d1*d1) * d2; //subtract cone of sphere 2
+
+            if(d1 > 0.0) {
+                overlap += (2.0 / 3.0) * renderer.pi *r1*r1*r1 * (1.0 - (d1 / r1)); //add sector of sphere 1
+                overlap -= (1.0 / 3.0) * renderer.pi * (r1*r1-d1*d1) * d1; //subtract cone of sphere 1
+            } else {
+                overlap += renderer.pi * ((2.0 / 3.0) * r1*r1*r1 - r1*r1*d1 + (1.0 / 3.0) * d1*d1*d1); //integrate sphere 1 from radius d1 (<0) to r1
+            }
+        }
+    }
+
+    return overlap;
+}
+
+float getIntersectionVolume(uint moduleIndex, vec3 modulePos, float moduleRad) {
+    float volume = 0.0;
+    
+    int minX = min(max(int(((modulePos.x - moduleRad) / simulation.sceneSize.x + 0.5) * float(simulation.numVoxels.x)), 0), simulation.numVoxels.x-1);
+    int maxX = min(max(int(((modulePos.x + moduleRad) / simulation.sceneSize.x + 0.5) * float(simulation.numVoxels.x)), 0), simulation.numVoxels.x-1);
+    for(int x=minX; x<=maxX; x++) {
+        float voxX = min(
+            abs(modulePos.x - (-0.5 * simulation.sceneSize.x + float(x) * simulation.voxelSize.x)),
+            abs(modulePos.x - (-0.5 * simulation.sceneSize.x + float(x+1) * simulation.voxelSize.x)));
+        float currRad = sqrt(voxX*voxX + moduleRad*moduleRad);
+        int minY = min(max(int(((modulePos.y - currRad) / simulation.sceneSize.y + 0.5) * float(simulation.numVoxels.y)), 0), simulation.numVoxels.y-1);
+        int maxY = min(max(int(((modulePos.y + currRad) / simulation.sceneSize.y + 0.5) * float(simulation.numVoxels.y)), 0), simulation.numVoxels.y-1);
+        for(int y=minY; y<=maxY; y++) {
+            int minZ = min(max(int(((modulePos.z - currRad) / simulation.sceneSize.z + 0.5) * float(simulation.numVoxels.z)), 0), simulation.numVoxels.z-1);
+            int maxZ = min(max(int(((modulePos.z + currRad) / simulation.sceneSize.z + 0.5) * float(simulation.numVoxels.z)), 0), simulation.numVoxels.z-1);
+            for(int z=minZ; z<=maxZ; z++) {
+                //check all modules in this voxel
+                uint voxelListIndex = voxelToListIndex(ivec3(x, y, z));
+                uint voxelOffset = voxelCount[voxelListIndex];
+                uint numModules = voxelCount[voxelListIndex+1] - voxelOffset;
+                for(uint m=0; m<numModules; m++) {
+                    uint neighborIndex = voxelData[voxelOffset+m];
+                    if(neighborIndex != moduleIndex && prevModules[neighborIndex].status > 0) {
+                        vec3 neighborPos = vec3(getModelMatrix(prevModules[neighborIndex].position, prevModules[neighborIndex].rotation, 1.0) * vec4(prevModules[neighborIndex].center, 1.0));
+                        volume += getSphereOverlap(distance(modulePos, neighborPos), moduleRad, prevModules[neighborIndex].radius);
+                    }
+                }
+            }
+        }
+    }
+
+    return volume;
 }
 
 void main() {
@@ -206,9 +231,60 @@ void main() {
 
     } else {
         if(module.status == 1) {
-            updateBoundingSphere(moduleIndex, module.center, module.radius);
+            //growth
+            //relativeVigor
+            //float growthRate = 3.0 * relativeVigor*relativeVigor - 2.0 * relativeVigor*relativeVigor*relativeVigor;
+            //moduleAge += growthRate * (simulation.elapsedTime - simulation.lastTime);
+            //module.age += module.vigor * plantSpecies[module.speciesIndex].growthSpeed * simulation.deltaTime;
+            float updatedAge = module.age + module.vigor * plantSpecies[module.speciesIndex].growthSpeed * simulation.deltaTime;
 
-            //TO DO: update module orientation
+            updateBoundingSphere(moduleIndex, updatedAge, module.center, module.radius);
+
+            if(updatedAge >= plantSpecies[module.speciesIndex].maxModuleAge) {
+                module.status = 2;
+
+            } else if(module.order > 0) {
+                //update module orientation
+                if(int(updatedAge / plantSpecies[module.speciesIndex].maxNodeAge) > int(module.age / plantSpecies[module.speciesIndex].maxNodeAge)) {
+                    module.numRotChanges = 0;
+                    //module.minIntersections = 1000.0;
+                }
+                if(module.numRotChanges < plantSpecies[module.speciesIndex].maxRotChanges) {
+                    mat4 moduleModel = getModelMatrix(module.position, module.rotation, 1.0);
+                    vec3 centerVec = vec3(moduleModel * vec4(module.center, 1.0)) - module.position;
+
+                    float epsAngle = plantSpecies[module.speciesIndex].rotChangeAngle;
+                    vec3 addedRotations[5] = vec3[](
+                        vec3(0.0, 0.0, 0.0),
+                        vec3(epsAngle, 0.0, 0.0),
+                        vec3(-epsAngle, 0.0, 0.0),
+                        vec3(0.0, 0.0, epsAngle),
+                        vec3(0.0, 0.0, -epsAngle));
+                    float minIntersections = 1000.0;
+                    int bestRotIndex = -1;
+                    for(int r=0; r<5; r++) {
+                        //vec3 moduleCenter = module.position + (getRotationMatrix(addedRotations[r]) * centerVec);
+                        vec3 moduleCenter = vec3(getModelMatrix(module.position, module.rotation+addedRotations[r], 1.0) * vec4(module.center, 1.0));
+                        float intersections = getIntersectionVolume(moduleIndex, moduleCenter, module.radius);
+                        if(intersections < minIntersections) {
+                            minIntersections = intersections;
+                            bestRotIndex = r;
+                        }
+                    }
+
+                    if(bestRotIndex >= 0) {
+                        //vec4 rQuat = vec4(sin(0.5*addedRotations[bestRotIndex].x), 0.0, 0.0, cos(0.5*addedRotations[bestRotIndex].x));
+                        //rQuat = combineQuats(rQuat, vec4(0.0, sin(0.5*addedRotations[bestRotIndex].y), 0.0, cos(0.5*addedRotations[bestRotIndex].y)));
+                        //rQuat = combineQuats(rQuat, vec4(0.0, 0.0, sin(0.5*addedRotations[bestRotIndex].z), cos(0.5*addedRotations[bestRotIndex].z)));
+                        //module.rotation = combineQuats(module.rotation, rQuat);
+                        module.rotation += addedRotations[bestRotIndex];
+                    }
+
+                    module.numRotChanges++;
+                }
+            }
+
+            module.age = updatedAge;
         }
         
         currModules[moduleIndex] = module;

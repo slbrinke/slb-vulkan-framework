@@ -11,10 +11,7 @@ uint32_t PlantSpecies::getIndex() {
 SpeciesUniforms PlantSpecies::getUniformData() {
     SpeciesUniforms speciesUniforms{};
     speciesUniforms.numPrototypes = m_numPrototypes;
-    speciesUniforms.growthSpeed = m_growthSpeed;
-    speciesUniforms.maxModuleAge = m_maxAge;
     speciesUniforms.maxModuleOrder = m_maxModuleOrder;
-    speciesUniforms.maxNodeAge = m_maxAge / static_cast<float>(m_maxModuleOrder+1);
     speciesUniforms.maxNodeChildren = m_maxChildren;
     speciesUniforms.minExtent = m_minBranchLength;
     speciesUniforms.maxExtent = m_maxBranchLength;
@@ -25,7 +22,13 @@ SpeciesUniforms PlantSpecies::getUniformData() {
         speciesUniforms.branchingThetas[4*c] = m_branchingThetas[c];
         speciesUniforms.branchingPhis[4*c] = m_branchingPhis[c];
     }
-    speciesUniforms.gravitropsim = m_gravitropism;
+    speciesUniforms.gravitropism = m_gravitropism;
+    speciesUniforms.growthSpeed = m_growthSpeed;
+    speciesUniforms.maxModuleAge = m_maxAge;
+    speciesUniforms.maxNodeAge = m_maxAge / static_cast<float>(m_maxModuleOrder+1);
+    speciesUniforms.minVigor = m_minVigor;
+    speciesUniforms.maxRotChanges = m_maxRotChanges;
+    speciesUniforms.rotChangeAngle = m_rotChangeAngle;
     return speciesUniforms;
 }
 
@@ -170,15 +173,18 @@ uint32_t PlantSpecies::createModules(std::vector<Module> &modules) {
     modules.resize(firstModule + m_numPlants);
     for(uint32_t p=0; p<m_numPlants; p++) {
         modules[firstModule+p].position = m_plantPositions[p];
-        auto rotAngle = dist(mt) * 2.0f * glm::pi<float>();
-        modules[firstModule+p].rotation = glm::vec4(glm::sin(0.5f * rotAngle) * glm::vec3(0.0f, 1.0f, 0.0f), glm::cos(0.5f * rotAngle));
         modules[firstModule+p].status = 1;
+        auto rotAngle = dist(mt) * 2.0f * glm::pi<float>();
+        //modules[firstModule+p].rotation = glm::vec4(glm::sin(0.5f * rotAngle) * glm::vec3(0.0f, 1.0f, 0.0f), glm::cos(0.5f * rotAngle));
+        //TO DO: random rotation around initial direction
+        modules[firstModule+p].rotation = glm::vec3(0.0f, dist(mt) * 2.0f * glm::pi<float>(), 0.0f);
+        modules[firstModule+p].age = m_initialAges[p];
         auto initialLength = m_maxBranchLength * (m_initialAges[p] / m_maxAge);
         modules[firstModule+p].center = 0.5f * initialLength * m_initialDirections[p];
         modules[firstModule+p].radius = 0.5f * initialLength;
-        modules[firstModule+p].age = m_initialAges[p];
         modules[firstModule+p].vigor = 1.0f;
         modules[firstModule+p].speciesIndex = m_index;
+        //TO DO: check lambda to prototype index
         modules[firstModule+p].prototypeIndex = static_cast<uint32_t>((2.0f * m_lambda - 1.0f) * static_cast<float>(m_numPrototypes - 1));
     }
 

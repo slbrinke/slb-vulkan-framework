@@ -17,23 +17,23 @@
 struct SpeciesUniforms {
     uint32_t numPrototypes; /**< Total number of module prototypes */
     uint32_t firstPrototype; /**< First index of the module prototypes within the prototypes uniform buffer */
-    float growthSpeed; /**< Growth rate in world scale per simulated second */
-    float maxModuleAge; /**< Maximum age at which a module stops growing */
     uint32_t maxModuleOrder; /**< Maximum order a module can have in the hierarchy */
-    float maxNodeAge; /**< Maximum age at which a branch segment stops growing */
     uint32_t maxNodeChildren; /**< Maximum number of child branches sprouting out from a branch segment */
     float minExtent; /**< Minimum length of a branch segment */
     float maxExtent; /**< Maximum length of a branch segment */
     float minRadius; /**< Minimum radius of a branch segment */
     float maxRadius; /**< Maximum radius of a branch segment */
-    float pad1;
     float sizeDecrease[20]; /**< Length of each child branch segment in relation to the parent branch segment length */
     float branchingThetas[20]; /**< Vertical branching angle of each child branch segment relative to the orientation of the parent */
     float branchingPhis[20]; /**< Horizontal branching angle of each child branch segment relative to the orientation of the parent */
-    float gravitropsim; /**< Strength of the impact of gravity on branch segments */
-    float pad2;
-    float pad3;
-    float pad4;
+    float gravitropism; /**< Strength of the impact of gravity on branch segments */
+    float growthSpeed; /**< Growth rate in world scale per simulated second */
+    float maxModuleAge; /**< Maximum age at which a module stops growing */
+    float maxNodeAge; /**< Maximum age at which a branch segment stops growing */
+    float minVigor; /**< Minimum vigor required for a module to stay alive */
+    uint32_t maxRotChanges; /**< Maximum number of rotation changes per orientation optimization */
+    float rotChangeAngle; /**< Small angle by which the rotation of a module is changed in one iteration */
+    float pad;
 };
 
 /**
@@ -52,12 +52,14 @@ struct SpeciesUniforms {
 struct Module {
     glm::vec3 position; /**< Origin of the module in world coordinates */
     uint32_t status; /**< State of the module within its lifetime */
-    glm::vec4 rotation; /**< Rotation of the module in world coordinates */
+    //glm::vec4 rotation; /**< Rotation of the module in world coordinates */
+    glm::vec3 rotation; /**< Rotation of the module as euler angles */
+    float age; /**< Time passed since module creation in simulated seconds */
     glm::vec3 center; /**< Center of all branch and bud positions in the local coordinates of the module */
     float radius; /**< Radius of the sphere encompassing the module at its current size */
-    float age; /**< Time passed since module creation in simulated seconds */
     float maxFlux; /**< Maximum approximated flux received by any child module down the hierarchy */
     float vigor; /**< Resource value characterizing the current state of the module */
+    uint32_t numRotChanges; /**< Number of rotation changes in the current orientation optimization */
     uint32_t order = 0; /**< Depth within the module hierarchy */
     uint32_t speciesIndex; /**< Index of the plant species within the uniform buffer */
     uint32_t prototypeIndex; /**< Index of the module prototype within the uniform buffer */
@@ -211,6 +213,9 @@ private:
     float m_growthSpeed = 0.3f; /**< Growth rate in world scale per simulated second */
     float m_lambda = 0.5f; /**< Amount of growth directed along the main axis relative to branching axes */
     uint32_t m_maxModuleOrder = 5; /**< Maximum depth of the plant hierarchy in number of modules */
+    float m_minVigor = 0.15f; /**< Minimum required vigor value for a module */
+    uint32_t m_maxRotChanges = 3; /**< Maximum number of iterations per module orientation optimization */
+    float m_rotChangeAngle = 0.05f; /**< Angle of each iteration during module orientation optimization */
 
     uint32_t m_numPrototypes = 3; /**< Number of prototypes defined for this species */
     uint32_t m_maxNodeOrder = 3; /**< Maximum branching depth within a module */

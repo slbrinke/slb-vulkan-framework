@@ -11,15 +11,23 @@ layout (local_size_x = 32, local_size_y = 1, local_size_z = 1) in;
 #include PlantModules
 #include SceneNodeConstants
 
-mat4 getModelMatrix(vec3 pos, vec4 rot, float scale) {
+mat4 getModelMatrix(vec3 pos, vec3 rot, float scale) {
     //scale
     mat4 mS = scale * mat4(1.0);
     mS[3][3] = 1.0;
     //rotate
+    /*
     mat4 mR = transpose(mat4(
         1.0 - 2.0*rot.y*rot.y - 2.0*rot.z*rot.z, 2.0*rot.x*rot.y - 2.0*rot.w*rot.z, 2.0*rot.x*rot.z + 2.0*rot.w*rot.y, 0.0,
         2.0*rot.x*rot.y + 2.0*rot.w*rot.z, 1.0 - 2.0*rot.x*rot.x - 2.0*rot.z*rot.z, 2.0*rot.y*rot.z - 2.0*rot.w*rot.x, 0.0,
         2.0*rot.x*rot.z - 2.0*rot.w*rot.y, 2.0*rot.y*rot.z + 2.0*rot.w*rot.x, 1.0 - 2.0*rot.x*rot.x - 2.0*rot.y*rot.y, 0.0,
+        0.0, 0.0, 0.0, 1.0
+    ));
+    */
+    mat4 mR = transpose(mat4(
+        cos(rot.y)*cos(rot.z), -cos(rot.y)*sin(rot.z), sin(rot.y), 0.0,
+        cos(rot.z)*sin(rot.x)*sin(rot.y)+cos(rot.x)*sin(rot.z), cos(rot.x)*cos(rot.z)-sin(rot.x)*sin(rot.y)*sin(rot.z), -cos(rot.y)*sin(rot.x), 0.0,
+        -cos(rot.x)*cos(rot.z)*sin(rot.y)+sin(rot.x)*sin(rot.z), cos(rot.z)*sin(rot.x)+cos(rot.x)*sin(rot.y)*sin(rot.z), cos(rot.x)*cos(rot.y), 0.0,
         0.0, 0.0, 0.0, 1.0
     ));
     //translate
@@ -103,6 +111,20 @@ bool listIndexToBudModel(uint listIndex, uint speciesIndex, uint prototypeIndex,
     return true;
 }
 
+vec3 nodeModelToEulerAngles(mat4 nodeModel) {
+    float y = asin(nodeModel[2][0]);
+    float x,z;
+    if(abs(y) == 0.5 * renderer.pi) {
+        z = 0.0;
+        x = sign(y) * atan(nodeModel[0][1], nodeModel[1][1]);
+    } else {
+        x = atan(-nodeModel[2][1], nodeModel[2][2]);
+        z = atan(-nodeModel[1][0], nodeModel[0][0]);
+    }
+    return vec3(x, y, z);
+}
+
+/*
 vec4 nodeModelToModuleRotation(mat4 nodeModel) {
     float x, y, z;
     float w = 0.5 * sqrt(nodeModel[0][0] + nodeModel[1][1] + nodeModel[2][2] + 1.0);
@@ -117,6 +139,7 @@ vec4 nodeModelToModuleRotation(mat4 nodeModel) {
     }
     return vec4(x, y, z, w);
 }
+*/
 
 void main() {
     uint moduleIndex = gl_GlobalInvocationID.x;
@@ -149,18 +172,8 @@ void main() {
 
         if(module.status == 1) {
             //senescence
-            if(module.vigor < 0.1) {
+            if(module.vigor < plantSpecies[module.speciesIndex].minVigor) {
                 module.status = 0;
-            }
-
-            //growth
-            //relativeVigor
-            //float growthRate = 3.0 * relativeVigor*relativeVigor - 2.0 * relativeVigor*relativeVigor*relativeVigor;
-            //moduleAge += growthRate * (simulation.elapsedTime - simulation.lastTime);
-            module.age += module.vigor * plantSpecies[module.speciesIndex].growthSpeed * simulation.deltaTime;
-
-            if(module.age >= plantSpecies[module.speciesIndex].maxModuleAge) {
-                module.status = 2;
             }
 
         } else if(module.status == 2 && module.order < currSceneCounts[10]) {
@@ -175,10 +188,13 @@ void main() {
                     uint addedIndex = atomicAdd(currSceneCounts[7], 1);
                     if(addedIndex < currSceneCounts[8]) {
                         prevModules[addedIndex].position = vec3(budModel * vec4(0.0, 0.0, 0.0, 1.0));
-                        prevModules[addedIndex].rotation = nodeModelToModuleRotation(budModel);
+                        //prevModules[addedIndex].rotation = nodeModelToModuleRotation(budModel);
+                        prevModules[addedIndex].rotation = nodeModelToEulerAngles(budModel);
                         prevModules[addedIndex].status = 1;
                         prevModules[addedIndex].age = plantSpecies[module.speciesIndex].maxModuleAge * simulation.deltaTime;
                         prevModules[addedIndex].vigor = 1.0;
+                        prevModules[addedIndex].numRotChanges = 0;
+                        //prevModules[addedIndex].minIntersections = 1000.0;
                         prevModules[addedIndex].order = module.order + 1;
                         prevModules[addedIndex].speciesIndex = module.speciesIndex;
                         prevModules[addedIndex].prototypeIndex = module.prototypeIndex;

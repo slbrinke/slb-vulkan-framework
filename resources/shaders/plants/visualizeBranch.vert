@@ -16,6 +16,14 @@ layout(location = 0) out vec3 passSize;
 layout(location = 1) out uint passSpeciesIndex;
 layout(location = 2) out mat4 passNodeModel;
 
+mat3 eulerToMatrix(float x, float y, float z) {
+    return transpose(mat3(
+        cos(y)*cos(z), -cos(y)*sin(z), sin(y),
+        cos(z)*sin(x)*sin(y)+cos(x)*sin(z), cos(x)*cos(z)-sin(x)*sin(y)*sin(z), -cos(y)*sin(x),
+        -cos(x)*cos(z)*sin(y)+sin(x)*sin(z), cos(z)*sin(x)+cos(x)*sin(y)*sin(z), cos(x)*cos(y)
+    ));
+}
+
 bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel, out float nodeExtent) {
     uint speciesIndex = currModules[moduleIndex].speciesIndex;
     uint maxChildren = plantSpecies[speciesIndex].maxNodeChildren;
@@ -31,6 +39,12 @@ bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel, 
 
     float nodeAge = currModules[moduleIndex].age / plantSpecies[speciesIndex].maxNodeAge;
     vec3 position = currModules[moduleIndex].position;
+    vec3 eulerAngles = currModules[moduleIndex].rotation;
+    mat3 rotMatrix = eulerToMatrix(eulerAngles.x, eulerAngles.y, eulerAngles.z);
+    vec3 xAxis = rotMatrix * vec3(1.0, 0.0, 0.0);
+    vec3 yAxis = rotMatrix * vec3(0.0, 1.0, 0.0);
+    vec3 zAxis = rotMatrix * vec3(0.0, 0.0, 1.0);
+    /*
     vec4 modRot = currModules[moduleIndex].rotation;
     vec3 xAxis = vec3(
         1.0 - 2.0*modRot.y*modRot.y - 2.0*modRot.z*modRot.z,
@@ -44,6 +58,7 @@ bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel, 
         2.0*modRot.x*modRot.z + 2.0*modRot.w*modRot.y,
         2.0*modRot.y*modRot.z - 2.0*modRot.w*modRot.x,
         1.0 - 2.0*modRot.x*modRot.x - 2.0*modRot.y*modRot.y);
+        */
     float extent = plantSpecies[speciesIndex].maxExtent;
     
     uint listIndex = plantPrototypes[currModules[moduleIndex].prototypeIndex].firstNode;
@@ -86,11 +101,6 @@ bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel, 
             vec4(yAxis, 0.0),
             vec4(zAxis, 0.0),
             vec4(position, 1.0));
-        //* transpose(mat4(
-        //    radius, 0.0, 0.0, 0.0,
-        //    0.0, extent, 0.0, 0.0,
-        //    0.0, 0.0, radius, 0.0,
-        //    0.0, 0.0, 0.0, 1.0));
     nodeExtent = min(nodeAge, 1.0) * extent;
     return true;
 }

@@ -12,8 +12,9 @@ layout(location = 3) in vec3 inTangent;
 
 layout(location = 0) out vec3 passCenter;
 layout(location = 1) out float passRadius;
-layout(location = 2) out float passVigor;
-layout(location = 3) out mat4 passModuleModel;
+layout(location = 2) out uint passStatus;
+layout(location = 3) out float passVigor;
+layout(location = 4) out mat4 passModuleModel;
 
 mat4 getModelMatrix(vec3 pos, vec3 rot, float scale) {
     //scale
@@ -50,6 +51,7 @@ void main() {
         gl_Position = camera.projection * camera.view * moduleModel * vec4(module.center, 1.0);
         passCenter = module.center;
         passRadius = module.radius;
+        passStatus = module.status;
         passVigor = module.vigor;
         passModuleModel = moduleModel;
     }

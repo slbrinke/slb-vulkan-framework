@@ -5,8 +5,9 @@ layout(line_strip, max_vertices = 30) out;
 
 layout(location = 0) in vec3 passCenter[];
 layout(location = 1) in float passRadius[];
-layout(location = 2) in float passVigor[];
-layout(location = 3) in mat4 passModuleModel[];
+layout(location = 2) in uint passStatus[];
+layout(location = 3) in float passVigor[];
+layout(location = 4) in mat4 passModuleModel[];
 
 #include Camera
 #include Renderer
@@ -14,9 +15,13 @@ layout(location = 3) in mat4 passModuleModel[];
 layout(location = 0) out vec3 passColor;
 
 void main() {
-    passColor = passVigor[0] * vec3(0.27, 0.93, 0.29)
-        + (1.0 - passVigor[0]) * vec3(0.91, 0.37, 0.0);
-
+    if(passStatus[0] > 1) {
+        passColor = vec3(0.31, 0.21, 0.12);
+    } else {
+        passColor = passVigor[0] * vec3(0.27, 0.93, 0.29)
+            + (1.0 - passVigor[0]) * vec3(0.91, 0.37, 0.0);
+    }
+    
     vec3 center = vec3(camera.view * passModuleModel[0] * vec4(passCenter[0], 1.0));
     float radius = passRadius[0];
     int resolution = 30;

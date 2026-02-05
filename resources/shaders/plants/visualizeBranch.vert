@@ -83,14 +83,14 @@ bool treeIndexToNodeModel(uint moduleIndex, uint treeIndex, out mat4 nodeModel, 
                 cos(phi) * sinTheta * xAxis
                 + cos(theta) * yAxis
                 + sin(phi) * sinTheta * zAxis
-                + plantSpecies[speciesIndex].gravitropism * vec3(0.0, -1.0, 0.0));
+                + plantSpecies[speciesIndex].gravitropism * vec3(0.0, 1.0, 0.0));
             xAxis = normalize(vec3(-yAxis.z, 0.0, yAxis.x));
             zAxis = normalize(cross(xAxis, yAxis));
         } else {
             xAxis = normalize(
                 cos(phi) * xAxis
                 + sin(phi) * zAxis);
-            yAxis = normalize(yAxis + plantSpecies[speciesIndex].gravitropism * vec3(0.0, -1.0, 0.0));
+            yAxis = normalize(yAxis + plantSpecies[speciesIndex].gravitropism * vec3(0.0, 1.0, 0.0));
             zAxis = normalize(cross(xAxis, yAxis));
             xAxis = normalize(cross(yAxis, zAxis));
         }

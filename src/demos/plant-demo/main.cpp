@@ -88,9 +88,19 @@ int main() {
     }
     scene->addSceneNode(lightsNode);
 
-    auto testSpecies = PlantSpecies();
-    testSpecies.addPlant(glm::vec3(0.0f), 0.1f);
-    scene->addPlants(testSpecies);
+    //auto testSpecies = PlantSpecies();
+    //testSpecies.addPlant(glm::vec3(0.0f), 0.1f);
+    //scene->addPlants(testSpecies);
+
+    auto pine = PlantSpecies();
+    pine.setBranchingAngles(0, 0.0f, 130.0f);
+    pine.setBranchingAngles(1, 50.0f, 130.0f);
+    pine.setMaturityOrder(1);
+    pine.setInitialLambda(0.9f);
+    pine.setMatureLambda(0.75f);
+    pine.setNumOptimizationIterations(3);
+    pine.addPlant(glm::vec3(0.0f), 0.1f);
+    scene->addPlants(pine);
 
     PlantRenderer renderer(context, scene);
 

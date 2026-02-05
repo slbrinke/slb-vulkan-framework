@@ -112,14 +112,14 @@ bool listIndexToBudPos(uint moduleIndex, float moduleAge, uint listIndex, out ve
                 cos(phi) * sinTheta * xAxis
                 + cos(theta) * yAxis
                 + sin(phi) * sinTheta * zAxis
-                + plantSpecies[speciesIndex].gravitropism * vec3(0.0, -1.0, 0.0));
+                + plantSpecies[speciesIndex].gravitropism * vec3(0.0, 1.0, 0.0));
             xAxis = normalize(vec3(-yAxis.z, 0.0, yAxis.x));
             zAxis = normalize(cross(xAxis, yAxis));
         } else {
             xAxis = normalize(
                 cos(phi) * xAxis
                 + sin(phi) * zAxis);
-            yAxis = normalize(yAxis + plantSpecies[speciesIndex].gravitropism * vec3(0.0, -1.0, 0.0));
+            yAxis = normalize(yAxis + plantSpecies[speciesIndex].gravitropism * vec3(0.0, 1.0, 0.0));
             zAxis = normalize(cross(xAxis, yAxis));
             xAxis = normalize(cross(yAxis, zAxis));
         }
@@ -247,7 +247,6 @@ void main() {
                 //update module orientation
                 if(int(updatedAge / plantSpecies[module.speciesIndex].maxNodeAge) > int(module.age / plantSpecies[module.speciesIndex].maxNodeAge)) {
                     module.numRotChanges = 0;
-                    //module.minIntersections = 1000.0;
                 }
                 if(module.numRotChanges < plantSpecies[module.speciesIndex].maxRotChanges) {
                     mat4 moduleModel = getModelMatrix(module.position, module.rotation, 1.0);
@@ -266,7 +265,7 @@ void main() {
                         //vec3 moduleCenter = module.position + (getRotationMatrix(addedRotations[r]) * centerVec);
                         vec3 moduleCenter = vec3(getModelMatrix(module.position, module.rotation+addedRotations[r], 1.0) * vec4(module.center, 1.0));
                         float intersections = getIntersectionVolume(moduleIndex, moduleCenter, module.radius);
-                        if(intersections < minIntersections) {
+                        if(intersections < minIntersections - renderer.epsilon) {
                             minIntersections = intersections;
                             bestRotIndex = r;
                         }

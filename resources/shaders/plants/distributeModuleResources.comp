@@ -102,6 +102,12 @@ bool listIndexToBudModel(uint listIndex, uint speciesIndex, uint prototypeIndex,
 
     //switch from branch origin to bud transform
     position += extent * yAxis;
+    xAxis = normalize(
+        cos(plantSpecies[speciesIndex].branchingPhis[0]) * xAxis
+        + sin(plantSpecies[speciesIndex].branchingPhis[0]) * zAxis);
+    yAxis = normalize(yAxis + plantSpecies[speciesIndex].gravitropism * vec3(0.0, -1.0, 0.0));
+    zAxis = normalize(cross(xAxis, yAxis));
+    xAxis = normalize(cross(yAxis, zAxis));
 
     budModel = mat4(
         vec4(xAxis, 0.0),
@@ -157,16 +163,24 @@ void main() {
         }
 
         //pass vigor on to child modules
+        float mature = 0.0;
+        if(module.order >= plantSpecies[module.speciesIndex].maturityOrder) {
+            mature = 1.0;
+        }
         float totalFlux = 0.0;
         for(int c=0; c<module.numChildren; c++) {
             if(prevModules[module.childIndices[c]].status > 0) {
-                totalFlux += plantPrototypes[module.prototypeIndex].budWeights[c] * prevModules[module.childIndices[c]].vigor;
+                totalFlux += prevModules[module.childIndices[c]].vigor * (
+                    mature * plantPrototypes[module.prototypeIndex].matureBudWeights[c]
+                    + (1.0 - mature) * plantPrototypes[module.prototypeIndex].initialBudWeights[c]);
             }
         }
         for(int c=0; c<module.numChildren; c++) {
             if(prevModules[module.childIndices[c]].status > 0) {
-                float weightedFlux = (plantPrototypes[module.prototypeIndex].budWeights[c] * prevModules[module.childIndices[c]].vigor) / totalFlux;
-                prevModules[module.childIndices[c]].vigor = weightedFlux * module.vigor;
+                float childFlux = prevModules[module.childIndices[c]].vigor * (
+                    mature * plantPrototypes[module.prototypeIndex].matureBudWeights[c]
+                    + (1.0 - mature) * plantPrototypes[module.prototypeIndex].initialBudWeights[c]);
+                prevModules[module.childIndices[c]].vigor = (childFlux / totalFlux) * module.vigor;
             }
         }
 
@@ -197,7 +211,13 @@ void main() {
                         //prevModules[addedIndex].minIntersections = 1000.0;
                         prevModules[addedIndex].order = module.order + 1;
                         prevModules[addedIndex].speciesIndex = module.speciesIndex;
-                        prevModules[addedIndex].prototypeIndex = module.prototypeIndex;
+                        //prevModules[addedIndex].prototypeIndex = module.prototypeIndex;
+                        float lambda = plantSpecies[module.speciesIndex].initialLambda;
+                        if(module.order+1 >= plantSpecies[module.speciesIndex].maturityOrder) {
+                            lambda = plantSpecies[module.speciesIndex].matureLambda;
+                        }
+                        uint numPrototypes = plantSpecies[module.speciesIndex].numPrototypes;
+                        prevModules[addedIndex].prototypeIndex = min(uint((2.0 * lambda - 1.0) * float(numPrototypes)), numPrototypes-1);
                         prevModules[addedIndex].parentIndex = moduleIndex;
                         module.childIndices[module.numChildren] = addedIndex;
                         module.numChildren++;

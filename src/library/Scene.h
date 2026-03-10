@@ -72,6 +72,12 @@ public:
      */
     uint32_t getNumBranches();
 
+    uint32_t getNumPlantSpecies();
+
+    std::unique_ptr<PlantSpecies> &getPlantSpecies(uint32_t speciesIndex);
+
+    std::vector<Prototype> &getPlantPrototypes();
+
     /**
      * Change the total size of the scene.
      * 
@@ -120,7 +126,7 @@ public:
      * 
      * @param plantSpecies added plant species
      */
-    void addPlants(PlantSpecies &plantSpecies);
+    void addPlants(std::unique_ptr<PlantSpecies> &plantSpecies);
 
     /**
      * Initialize meshes, materials, and descriptor sets.
@@ -227,6 +233,7 @@ private:
 
     //plants
     uint32_t m_numPlantSpecies = 0; /**< Number of plant species */
+    std::vector<std::unique_ptr<PlantSpecies>> m_plantSpecies;
     std::vector<SpeciesUniforms> m_speciesUniforms; /**< Uniform data for all plant species in the scene */
     uint32_t m_numPlantPrototypes = 0; /**< Number of plant module prototypes */
     std::vector<Prototype> m_plantPrototypes; /**< Uniform data for the module prototypes of all plant species */

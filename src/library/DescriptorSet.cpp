@@ -17,6 +17,17 @@ VkDescriptorSet DescriptorSet::getSet(uint32_t frameIndex) {
     return m_sets[frameIndex];
 }
 
+VkBuffer DescriptorSet::getBuffer(std::string name, uint32_t frameIndex) {
+    uint32_t descriptorIndex = 0;
+    while(descriptorIndex < m_numDescriptors) {
+        if(m_descriptors[descriptorIndex].name == name) {
+            return m_descriptors[descriptorIndex].buffers[frameIndex];
+        }
+        descriptorIndex++;
+    }
+    throw std::runtime_error("DESCRIPTOR SET ERROR: Could not find a buffer named " + name);
+}
+
 void DescriptorSet::addBuffer(std::string name, VkDescriptorType descriptorType, VkDeviceSize bufferSize, bool doubleBinding, const void *data) {
     m_descriptors.resize(m_numDescriptors + 1);
     auto &descriptor = m_descriptors[m_numDescriptors];

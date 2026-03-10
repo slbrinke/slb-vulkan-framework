@@ -17,7 +17,10 @@ public:
     PlantRenderer(std::shared_ptr<Context> &context, std::shared_ptr<Scene> &scene);
     ~PlantRenderer() = default;
 
+    void constructModuleGeometry();
+
 private:
+
     void setUpRenderOutput() override;
     void setUpRenderSteps() override;
 

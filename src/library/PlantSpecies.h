@@ -1,12 +1,11 @@
 #ifndef SLBVULKAN_PLANTSPECIES_H
 #define SLBVULKAN_PLANTSPECIES_H
 
-#include <vector>
 #include <random>
 #include <stdexcept>
 #include <iostream>
 
-#include <glm/ext.hpp>
+#include "Mesh.h"
 
 /**
  * GPU representation of a plant species.
@@ -115,7 +114,7 @@ struct Node {
  */
 class PlantSpecies {
 public:
-    PlantSpecies() = default;
+    PlantSpecies();
     ~PlantSpecies() = default;
 
     /**
@@ -224,14 +223,17 @@ public:
     uint32_t getMaxNodesPerPrototype();
 
     /**
-     * Set up the module prototypes for this plant species.
+     * Add the defined prototypes to the buffers handled by the scene.
      * 
-     * @param prototypes overall list the prototype data of this species is added to
-     * @param numNodes total node counter the number of branch segment nodes is added to
-     * @param nodes overall list the nodes representing branch segments is added to
-     * @return number of added prototypes
+     * All plant prototypes are gathered by the scene and passed to the gpu simulation in a total prototype buffer.
+     * The hierarchy of each prototype is represented by nodes added to the scene node buffer.
+     * 
+     * @param numPrototypes total prototype counter in the scene
+     * @param prototypes list of the prototypes of all plant species managed in the scene
+     * @param numNodes total node counter in the scene
+     * @param nodes list of nodes in the scene
      */
-    uint32_t createPrototypes(std::vector<Prototype> &prototypes, uint32_t &numNodes, std::vector<Node> &nodes);
+    void recordPrototypes(uint32_t &numPrototypes, std::vector<Prototype> &prototypes, uint32_t &numNodes, std::vector<Node> &nodes);
 
     /**
      * Set up the initial modules for the defined plants.
@@ -244,20 +246,28 @@ public:
      */
     uint32_t createModules(std::vector<Module> &modules);
 
+    void addModuleToMesh(Module &module, std::shared_ptr<Mesh> &mesh);
+
 private:
+
+    /**
+     * Set up the module prototypes for this plant species.
+     */
+    void createPrototypes();
+
     /**
      * Accumulate branch weights within a module prototype.
      * 
      * The node structure of a prototype is iterated to multiply the lambda values.
      * 
      * @param lambda resource distribution parameter at branching points
-     * @param listIndex index of a branch segment within the node buffer
-     * @param nodes list of all nodes comprising the module prototypes
-     * @param prototypeIndex index of a prototype within the prototype buffer
-     * @param prototypes list of all prototypes modules can be assigned
+     * @param listIndex index of a branch segment within the node list of this species
+     * @param prototypeIndex index of a prototype within the prototype list of this species
      * @return amount of resources directed towards a node relative to the module prototype
      */
-    float listIndexToNodeWeight(float lambda, uint32_t listIndex, std::vector<Node> &nodes, uint32_t prototypeIndex, std::vector<Prototype> &prototypes);
+    float listIndexToNodeWeight(float lambda, uint32_t listIndex, uint32_t prototypeIndex);
+
+    //bool listIndexToNodeModel(uint32_t listIndex, Module &module, glm::mat4 &nodeModel, glm::mat4 &parentModel);
 
     uint32_t m_index = std::numeric_limits<uint32_t>::max(); /**< Unique index identifying the plant species in the scene */
 
@@ -291,6 +301,11 @@ private:
     float m_minVigor = 0.15f; /**< Minimum required vigor value for a module */
     uint32_t m_maxRotChanges = 3; /**< Maximum number of iterations per module orientation optimization */
     float m_rotChangeAngle = 1.0f; /**< Angle of each rotation during module orientation optimization in degrees */
+
+    std::vector<Prototype> m_prototypes;
+    std::vector<Node> m_nodes;
+    uint32_t m_prototypeOffset = 0;
+    uint32_t m_nodeOffset = 0;
 
 };
 

@@ -75,6 +75,21 @@ uint32_t Scene::getNumBranches() {
     return m_maxPlantModules * m_maxNodesPerModule;
 }
 
+uint32_t Scene::getNumPlantSpecies() {
+    return m_numPlantSpecies;
+}
+
+std::unique_ptr<PlantSpecies> &Scene::getPlantSpecies(uint32_t speciesIndex) {
+    if(speciesIndex >= m_numPlantSpecies) {
+        throw std::runtime_error("SCENE ERROR: There are only " + std::to_string(m_numPlantSpecies) + " plant species.");
+    }
+    return m_plantSpecies[speciesIndex];
+}
+
+std::vector<Prototype> &Scene::getPlantPrototypes() {
+    return m_plantPrototypes;
+}
+
 void Scene::setSize(glm::vec3 size) {
     m_size = size;
 }
@@ -101,16 +116,15 @@ void Scene::addSun(float theta, float phi, glm::vec3 color, float intensity) {
     m_rootNode->addLight(sun);
 }
 
-void Scene::addPlants(PlantSpecies &plantSpecies) {
-    plantSpecies.setIndex(m_numPlantSpecies);
-    m_speciesUniforms.emplace_back(plantSpecies.getUniformData());
-    auto addedPrototypes = plantSpecies.createPrototypes(m_plantPrototypes, m_numNodes, m_nodes);
-    m_speciesUniforms[m_numPlantSpecies].numPrototypes = addedPrototypes;
-    m_numPlantPrototypes += addedPrototypes;
-    auto addedModules = plantSpecies.createModules(m_plantModules);
-    m_numPlantModules += addedModules;
-    m_maxModuleOrder = glm::max(m_maxModuleOrder, plantSpecies.getMaxModuleOrder());
-    m_maxNodesPerModule = glm::max(m_maxNodesPerModule, plantSpecies.getMaxNodesPerPrototype());
+void Scene::addPlants(std::unique_ptr<PlantSpecies> &plantSpecies) {
+    plantSpecies->setIndex(m_numPlantSpecies);
+    m_speciesUniforms.emplace_back(plantSpecies->getUniformData());
+    m_speciesUniforms.back().firstPrototype = m_numPlantPrototypes;
+    plantSpecies->recordPrototypes(m_numPlantPrototypes, m_plantPrototypes, m_numNodes, m_nodes);
+    m_numPlantModules += plantSpecies->createModules(m_plantModules);
+    m_maxModuleOrder = glm::max(m_maxModuleOrder, plantSpecies->getMaxModuleOrder());
+    m_maxNodesPerModule = glm::max(m_maxNodesPerModule, plantSpecies->getMaxNodesPerPrototype());
+    m_plantSpecies.emplace_back(std::move(plantSpecies));
     m_numPlantSpecies++;
 }
 
@@ -252,8 +266,10 @@ void Scene::updateUniforms(std::vector<DescriptorSet> &descriptorSets, uint32_t 
     }
     descriptorSets[1].updateBuffer("Lights", frameIndex, m_lightUniforms.data());
 
-    descriptorSets[2].updateBuffer("PlantSpecies", frameIndex, m_speciesUniforms.data());
-    descriptorSets[2].updateBuffer("PlantPrototypes", frameIndex, m_plantPrototypes.data());
+    if(m_numPlantSpecies > 0) {
+        descriptorSets[2].updateBuffer("PlantSpecies", frameIndex, m_speciesUniforms.data());
+        descriptorSets[2].updateBuffer("PlantPrototypes", frameIndex, m_plantPrototypes.data());
+    }
 }
 
 void Scene::renderMeshes(VkCommandBuffer commandBuffer, VkPipelineLayout pipelineLayout, uint32_t numInstances) {

@@ -7,18 +7,22 @@
 
 #include "ResourceLoader.h"
 
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-    if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(window, true);
-    }
-}
-
 int screenWidth = 1000;
 int screenHeight = 700;
 
 std::shared_ptr<Context> context = nullptr;
 std::shared_ptr<Camera> camera = nullptr;
 std::shared_ptr<Scene> scene = nullptr;
+std::shared_ptr<PlantRenderer> renderer = nullptr;
+
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    if(key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
+        glfwSetWindowShouldClose(window, true);
+    }
+    if(key == GLFW_KEY_G && action == GLFW_PRESS) {
+        renderer->constructModuleGeometry();
+    }
+}
 
 int main() {
     context = std::make_shared<Context>(screenWidth, screenHeight, "Vulkan Framework");
@@ -92,28 +96,28 @@ int main() {
     //testSpecies.addPlant(glm::vec3(0.0f), 0.1f);
     //scene->addPlants(testSpecies);
 
-    auto pine = PlantSpecies();
-    pine.setBranchingAngles(0, 0.0f, 130.0f);
-    pine.setBranchingAngles(1, 50.0f, 130.0f);
-    pine.setMaturityOrder(1);
-    pine.setInitialLambda(0.9f);
-    pine.setMatureLambda(0.75f);
-    pine.setNumOptimizationIterations(3);
-    pine.addPlant(glm::vec3(0.0f), 0.1f);
+    std::unique_ptr<PlantSpecies> pine = std::make_unique<PlantSpecies>();
+    pine->setBranchingAngles(0, 0.0f, 130.0f);
+    pine->setBranchingAngles(1, 50.0f, 130.0f);
+    pine->setMaturityOrder(1);
+    pine->setInitialLambda(0.9f);
+    pine->setMatureLambda(0.75f);
+    pine->setNumOptimizationIterations(3);
+    pine->addPlant(glm::vec3(0.0f), 0.1f);
     scene->addPlants(pine);
 
-    PlantRenderer renderer(context, scene);
+    renderer = std::make_shared<PlantRenderer>(context, scene);
 
     while(!glfwWindowShouldClose(context->getWindow().get())) {
         glfwPollEvents();
         camera->updateInput(context->getWindow());
 
-        renderer.update();
-        renderer.render();
+        renderer->update();
+        renderer->render();
     }
     vkDeviceWaitIdle(context->getDevice());
 
-    renderer.cleanUp();
+    renderer->cleanUp();
     scene->cleanUp(context);
     context->cleanUp();
 

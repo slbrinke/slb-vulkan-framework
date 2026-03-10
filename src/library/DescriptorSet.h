@@ -61,6 +61,8 @@ public:
      */
     VkDescriptorSet getSet(uint32_t frameIndex);
 
+    VkBuffer getBuffer(std::string name, uint32_t frameIndex);
+
     /**
      * Add a buffer resource to the descriptor set.
      * 

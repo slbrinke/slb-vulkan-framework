@@ -1,5 +1,9 @@
 #include "PlantSpecies.h"
 
+PlantSpecies::PlantSpecies() {
+    createPrototypes();
+}
+
 bool PlantSpecies::hasIndex() {
     return m_index != std::numeric_limits<uint32_t>::max();
 }
@@ -84,67 +88,96 @@ uint32_t PlantSpecies::getMaxNodesPerPrototype() {
     return sum;
 }
 
-uint32_t PlantSpecies::createPrototypes(std::vector<Prototype> &prototypes, uint32_t &numNodes, std::vector<Node> &nodes) {
-    uint32_t firstPrototype = prototypes.size();
-    uint32_t firstNode = nodes.size();
-
-    prototypes.resize(firstPrototype + m_numPrototypes);
+void PlantSpecies::createPrototypes() {
+    uint32_t numNodes = 0;
+    m_prototypes.resize(m_numPrototypes);
     for(uint32_t p=0; p<m_numPrototypes; p++) {
+        //resource distribution lambda varies from 0.5 to 1.0
         float lambda = static_cast<float>(p) / glm::max(1.0f, static_cast<float>(m_numPrototypes-1));
-        prototypes[firstPrototype+p].lambda = 0.5 + 0.5 * lambda;
-        //prototypes[firstPrototype+p].determinacy = 0.0f;
-        
-        uint32_t nodeOffset = firstNode;
-        uint32_t maxOffset = 1 + static_cast<uint32_t>((1.0f - lambda) * static_cast<float>(glm::pow(m_maxChildNodes, m_maxNodeOrder) - 1));
-        uint32_t offset, numEmpty = 0;
+        m_prototypes[p].lambda = 0.5 + 0.5 * lambda;
+        m_prototypes[p].firstNode = numNodes;
+
+        //add nodes level per level:
+        //the greater lambda the more possible leaf nodes
+        uint32_t maxPerLevel = 1 + static_cast<uint32_t>((1.0f - lambda) * static_cast<float>(glm::pow(m_maxChildNodes, m_maxNodeOrder) - 1));
+        uint32_t nodesPerLevel, numEmpty = 0;
         uint32_t base = 1;
         for(uint32_t l=0; l<=m_maxNodeOrder; l++) {
-            offset = glm::min(base, maxOffset);
-            nodes.resize(nodeOffset + offset);
-            for(uint32_t o=0; o<offset; o++) {
-                nodes[nodeOffset+o].status = 1;
-                nodes[nodeOffset+o].age = m_maxModuleAge * (1.0f - (static_cast<float>(l) / static_cast<float>(m_maxNodeOrder+1)));
-                nodes[nodeOffset+o].order = l;
+            nodesPerLevel = glm::min(base, maxPerLevel);
+            m_nodes.resize(numNodes + nodesPerLevel);
+            for(uint32_t n=0; n<nodesPerLevel; n++) {
+                m_nodes[numNodes+n].status = 1;
+                m_nodes[numNodes+n].age = m_maxModuleAge * (1.0f - (static_cast<float>(l) / static_cast<float>(m_maxNodeOrder+1)));
+                m_nodes[numNodes+n].order = l;
                 if(l > 0) {
-                    nodes[nodeOffset+o].parentIndex = nodeOffset - (base / m_maxChildNodes - numEmpty) + (o / m_maxChildNodes);
+                    m_nodes[numNodes+n].parentIndex = numNodes - (base / m_maxChildNodes - numEmpty) + (n / m_maxChildNodes);
                 }
                 if(l < m_maxNodeOrder) {
                     for(uint32_t c=0; c<m_maxChildNodes; c++) {
-                        if(o*m_maxChildNodes+c < glm::min(base*m_maxChildNodes, maxOffset)) {
-                            nodes[nodeOffset+o].childIndices[c] = nodeOffset + offset + o * m_maxChildNodes + c;
-                            nodes[nodeOffset+o].numChildren++;
+                        if(n*m_maxChildNodes+c < glm::min(base*m_maxChildNodes, maxPerLevel)) {
+                            m_nodes[numNodes+n].childIndices[c] = numNodes + nodesPerLevel + n * m_maxChildNodes + c;
+                            m_nodes[numNodes+n].numChildren++;
                         }
                     }
                 }
             }
-            nodeOffset += offset;
-            numEmpty = base - offset;
+            numNodes += nodesPerLevel;
+            numEmpty = base - nodesPerLevel;
             base *= m_maxChildNodes;
         }
 
-        numNodes += nodeOffset - firstNode;
-        prototypes[firstPrototype+p].numNodes = nodeOffset - firstNode;
-        prototypes[firstPrototype+p].firstNode = firstNode;
+        m_prototypes[p].numNodes = numNodes - m_prototypes[p].firstNode;
 
+        //count number of buds and calculate their relative weights
         uint32_t numBuds = 0;
-        for(uint32_t n=0; n<nodeOffset-firstNode; n++) {
-            if(nodes[firstNode+n].numChildren == 0 && numBuds < 8) {
-                prototypes[firstPrototype+p].budIndices[4*numBuds] = n;
-                prototypes[firstPrototype+p].initialBudWeights[4*numBuds] = listIndexToNodeWeight(m_initialLambda, firstNode+n, nodes, firstPrototype+p, prototypes);
-                prototypes[firstPrototype+p].matureBudWeights[4*numBuds] = listIndexToNodeWeight(m_matureLambda, firstNode+n, nodes, firstPrototype+p, prototypes);
+        for(uint32_t n=0; n<m_prototypes[p].numNodes; n++) {
+            if(m_nodes[m_prototypes[p].firstNode+n].numChildren == 0 && numBuds < 8) {
+                m_prototypes[p].budIndices[4*numBuds] = n;
+                m_prototypes[p].initialBudWeights[4*numBuds] = listIndexToNodeWeight(m_initialLambda, m_prototypes[p].firstNode+n, p);
+                m_prototypes[p].matureBudWeights[4*numBuds] = listIndexToNodeWeight(m_matureLambda, m_prototypes[p].firstNode+n, p);
                 numBuds++;
             }
         }
-        prototypes[firstPrototype+p].numBuds = numBuds;
-
-        firstNode = nodeOffset;
+        m_prototypes[p].numBuds = numBuds;
     }
-
-    return m_numPrototypes;
 }
 
-float PlantSpecies::listIndexToNodeWeight(float lambda, uint32_t listIndex, std::vector<Node> &nodes, uint32_t prototypeIndex, std::vector<Prototype> &prototypes) {
-    uint32_t rootIndex = prototypes[prototypeIndex].firstNode; //index of the root node of the prototype
+void PlantSpecies::recordPrototypes(uint32_t &numPrototypes, std::vector<Prototype> &prototypes, uint32_t &numNodes, std::vector<Node> &nodes) {
+    m_prototypeOffset = numPrototypes;
+    m_nodeOffset = numNodes;
+
+    prototypes.resize(m_prototypeOffset + m_numPrototypes);
+    for(uint32_t p=0; p<m_numPrototypes; p++) {
+        prototypes[m_prototypeOffset+p].lambda = m_prototypes[p].lambda;
+        prototypes[m_prototypeOffset+p].numNodes = m_prototypes[p].numNodes;
+        prototypes[m_prototypeOffset+p].firstNode = m_nodeOffset + m_prototypes[p].firstNode;
+        prototypes[m_prototypeOffset+p].numBuds = m_prototypes[p].numBuds;
+        for(uint32_t b=0; b<m_prototypes[p].numBuds; b++) {
+            prototypes[m_prototypeOffset+p].budIndices[4*b] = m_prototypes[p].budIndices[4*b];
+            prototypes[m_prototypeOffset+p].initialBudWeights[4*b] = m_prototypes[p].initialBudWeights[4*b];
+            prototypes[m_prototypeOffset+p].matureBudWeights[4*b] = m_prototypes[p].matureBudWeights[4*b];
+        }
+    }
+
+    uint32_t addedNodes = static_cast<uint32_t>(m_nodes.size());
+    nodes.resize(m_nodeOffset + addedNodes);
+    for(uint32_t n=0; n<addedNodes; n++) {
+        nodes[m_nodeOffset+n].status = 1;
+        nodes[m_nodeOffset+n].age = m_nodes[n].age;
+        nodes[m_nodeOffset+n].order = m_nodes[n].order;
+        nodes[m_nodeOffset+n].parentIndex = m_nodeOffset + m_nodes[n].parentIndex;
+        nodes[m_nodeOffset+n].numChildren = m_nodes[n].numChildren;
+        for(uint32_t c=0; c<m_nodes[n].numChildren; c++) {
+            nodes[m_nodeOffset+n].childIndices[c] = m_nodeOffset + m_nodes[n].childIndices[c];
+        }
+    }
+
+    numPrototypes += m_numPrototypes;
+    numNodes += addedNodes;
+}
+
+float PlantSpecies::listIndexToNodeWeight(float lambda, uint32_t listIndex, uint32_t prototypeIndex) {
+    uint32_t rootIndex = m_prototypes[prototypeIndex].firstNode; //index of the root node of the prototype
     uint32_t currIndex = listIndex;
 
     uint32_t level = 0;
@@ -152,7 +185,7 @@ float PlantSpecies::listIndexToNodeWeight(float lambda, uint32_t listIndex, std:
     uint32_t offset = 0;
     while(currIndex > rootIndex) {
         uint32_t child = 0;
-        while(nodes[nodes[currIndex].parentIndex].childIndices[child] != currIndex
+        while(m_nodes[m_nodes[currIndex].parentIndex].childIndices[child] != currIndex
             && child < m_maxChildNodes) {
             child++;
         }
@@ -164,7 +197,7 @@ float PlantSpecies::listIndexToNodeWeight(float lambda, uint32_t listIndex, std:
         base *= m_maxChildNodes;
         level++;
 
-        currIndex = nodes[currIndex].parentIndex;
+        currIndex = m_nodes[currIndex].parentIndex;
     }
 
     float weight = 1.0f;
@@ -174,7 +207,7 @@ float PlantSpecies::listIndexToNodeWeight(float lambda, uint32_t listIndex, std:
         offset -= child * base;
 
         float total = lambda;
-        for(uint32_t c=1; c<nodes[currIndex].numChildren; c++) {
+        for(uint32_t c=1; c<m_nodes[currIndex].numChildren; c++) {
             total += (1.0f - lambda) / static_cast<float>(m_maxChildNodes-1);
         }
         if(child == 0) {
@@ -186,7 +219,7 @@ float PlantSpecies::listIndexToNodeWeight(float lambda, uint32_t listIndex, std:
         //if(child >= nodes[currIndex].numChildren) {
         //    return false;
         //}
-        currIndex = nodes[currIndex].childIndices[child];
+        currIndex = m_nodes[currIndex].childIndices[child];
     }
 
     return weight;
@@ -213,8 +246,38 @@ uint32_t PlantSpecies::createModules(std::vector<Module> &modules) {
         modules[firstModule+p].radius = 0.5f * initialLength;
         modules[firstModule+p].vigor = 1.0f;
         modules[firstModule+p].speciesIndex = m_index;
-        modules[firstModule+p].prototypeIndex = glm::min(static_cast<uint32_t>((2.0f * m_initialLambda - 1.0f) * static_cast<float>(m_numPrototypes)), m_numPrototypes-1);
+        modules[firstModule+p].prototypeIndex = m_prototypeOffset + glm::min(static_cast<uint32_t>((2.0f * m_initialLambda - 1.0f) * static_cast<float>(m_numPrototypes)), m_numPrototypes-1);
     }
 
     return m_numPlants;
+}
+
+void PlantSpecies::addModuleToMesh(Module &module, std::shared_ptr<Mesh> &mesh) {
+    //TO DO!!!
+    /*
+    auto &prototype = m_prototypes[module.prototypeIndex - m_prototypeOffset];
+    for(uint32_t n=0; n<prototype.numNodes; n++) {
+        glm::mat4 nodeModel, parentModel;
+        if(listIndexToNodeModel(prototype.firstNode+n, module, nodeModel, parentModel)) {
+            int resolution = 5;
+            float step = 1.0f / static_cast<float>(resolution);
+            for(int i=0; i<resolution; i++) {
+                float hRel = static_cast<float>(i) * step;
+                float phi = hRel * 2.0f * glm::pi<float>();
+                mesh->addVertex(
+                    glm::vec3(parentModel * glm::vec4(m_minBranchRadius * glm::cos(phi), 0.0f, -m_minBranchRadius * glm::sin(phi), 1.0f)),
+                    glm::vec3(0.0f),
+                    glm::vec2(hRel, 0.0f),
+                    glm::vec3(0.0f)
+                );
+                mesh->addVertex(
+                    glm::vec3(nodeModel * glm::vec4(m_minBranchRadius * glm::cos(phi), 0.0f, -m_minBranchRadius * glm::sin(phi), 1.0f)),
+                    glm::vec3(0.0f),
+                    glm::vec2(hRel, 1.0f),
+                    glm::vec3(0.0f)
+                );
+            }
+        }
+    }
+        */
 }

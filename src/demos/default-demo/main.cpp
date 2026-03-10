@@ -29,7 +29,7 @@ int main() {
     scene = std::make_shared<Scene>(camera);
     scene->addEnvironmentMap("sunflowers_puresky_4k.hdr");
     //scene->addSun(30.0f, 50.0f, glm::vec3(0.85f, 0.67f, 0.29f), 1.0f);
-    scene->addSun(44.0f, 215.0f, glm::vec3(1.0f), 5.0f);
+    scene->addSun(44.0f, 215.0f, glm::vec3(1.0f), 3.0f);
 
     auto modelNode = std::make_unique<SceneNode>();
     auto compostBagsNode = std::make_unique<SceneNode>();

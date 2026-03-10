@@ -112,3 +112,36 @@ void PlantRenderer::setUpRenderSteps() {
     m_renderSteps.back().initRenderStep(m_renderOutput[0], 0);
     */
 }
+
+void PlantRenderer::constructModuleGeometry() {
+    std::cout << "   PLANT RENDERER: Contructing geometry" << std::endl;
+    std::vector<std::shared_ptr<Mesh>> meshes;
+    for(uint32_t p=0; p<m_scene->getNumPlantSpecies(); p++) {
+        meshes.emplace_back(std::make_shared<Mesh>());
+    }
+    
+    uint32_t maxModules = m_scene->getMaxPlantModules();
+    std::vector<Module> modules(maxModules);
+    uint32_t frameIndex = m_currentFrame % m_numSwapChainImages;
+    
+    VkBuffer tmpBuffer;
+    VkDeviceMemory tmpMemory;
+    VkDeviceSize bufferSize = maxModules * sizeof(Module);
+    m_context->createBuffer(bufferSize, VK_BUFFER_USAGE_TRANSFER_DST_BIT, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT, tmpBuffer, tmpMemory);
+    m_context->copyBuffer(m_descriptorSets[2].getBuffer("PlantModules", frameIndex), tmpBuffer, bufferSize);
+    void* moduleData;
+    vkMapMemory(m_context->getDevice(), tmpMemory, 0, bufferSize, 0, &moduleData);
+    memcpy(modules.data(), moduleData, bufferSize);
+
+    for(auto &module : modules) {
+        if(module.status > 0) {
+            m_scene->getPlantSpecies(module.speciesIndex)->addModuleToMesh(module, meshes[module.speciesIndex]);
+        }
+    }
+    
+    vkUnmapMemory(m_context->getDevice(), tmpMemory);
+    vkDestroyBuffer(m_context->getDevice(), tmpBuffer, nullptr);
+    vkFreeMemory(m_context->getDevice(), tmpMemory, nullptr);
+
+    //TO DO: clear buffer
+}

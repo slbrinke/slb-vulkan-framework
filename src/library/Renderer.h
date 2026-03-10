@@ -120,6 +120,8 @@ protected:
     VkFormat m_swapChainFormat = VK_FORMAT_R8G8B8A8_SRGB; /**< Color format used for swap chain images */
     VkFormat m_depthFormat; /**< Format suitable for depth buffers */
 
+    uint32_t m_currentFrame = 0; /**< Index of the current frame throughout the runtime */
+
     std::vector<DescriptorSet> m_descriptorSets; /**< List of descriptor sets added to render steps as requested in the shaders */
     std::vector<RenderOutput> m_renderOutput; /**< List of output image sets to render to */
     std::vector<RenderStep> m_renderSteps; /**< Individual rendering steps iterated for every frame */
@@ -210,7 +212,6 @@ private:
     std::vector<VkFence> m_computeInFlightFences;
     std::vector<VkFence> m_graphicsInFlightFences;
 
-    uint32_t m_currentFrame = 0; /**< Index of the current frame throughout the runtime */
     uint32_t m_swapChainImageIndex = 0; /**< Index of the current swap chain image */
     bool m_frameBufferResized = false;
     

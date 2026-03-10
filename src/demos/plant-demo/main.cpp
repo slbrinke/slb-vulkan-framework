@@ -34,7 +34,7 @@ int main() {
     //camera->setMode(frontView);
 
     scene = std::make_shared<Scene>(camera);
-    scene->addEnvironmentMap("sunflowers_puresky_4k.hdr");
+    scene->addEnvironmentMap("sunflowers_puresky_4k.hdr", 0.0f);
     scene->addSun(44.0f, 215.0f, glm::vec3(1.0f), 5.0f);
     scene->setSize(glm::vec3(7.0f));
 

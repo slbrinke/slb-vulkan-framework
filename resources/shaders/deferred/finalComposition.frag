@@ -2,6 +2,7 @@
 
 layout(location = 0) in vec2 passTexCoord;
 
+#include Renderer
 #include Textures
 #include ShadingResult
 
@@ -33,8 +34,9 @@ void main() {
     vec4 shadingData = subpassLoad(shadingResult, gl_SampleID);
     if(shadingData.w > 0.0) {
         final = vec3(shadingData);
-    } else {
-        final = vec3(texture(materialTextures[0], passTexCoord));
+    } else if(renderer.useEnvMap) {
+        vec2 envCoord = vec2(passTexCoord.x + renderer.envMapOffset, passTexCoord.y);
+        final = vec3(texture(materialTextures[0], envCoord));
     }
 
     fragmentColor = vec4(convertSRGBToLinear(final), 1.0);

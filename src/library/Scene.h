@@ -42,6 +42,10 @@ public:
      */
     glm::vec3 getBackgroundColor();
 
+    bool hasEnvironmentMap();
+
+    float getEnvironmentMapOffset();
+
     /**
      * Return the total numbers of different components of the scene.
      * 
@@ -102,8 +106,9 @@ public:
      * Add an hdri image as environment map.
      * 
      * @param fileName name of an image file in the resources/textures folder
+     * @param phi rotation of the environment map around the global y-axis in degrees
      */
-    void addEnvironmentMap(std::string fileName);
+    void addEnvironmentMap(std::string fileName, float phi);
 
     /**
      * Add the sun as a default light source.
@@ -221,6 +226,7 @@ private:
 
     bool m_hasEnvMap = false; /**< Stores whether an environment map has been assigned */
     std::string m_envMapFile = ""; /**< Name of the image file containing the hdri environment map */
+    float m_envMapOffset = 0.0f; /**< Horizontal offset of the envrionment map */
 
     uint32_t m_numLights = 0; /**< Number of light sources in the scene graph */
     std::vector<LightUniforms> m_lightUniforms; /**< Uniform data for all lights in the scene */

@@ -183,12 +183,14 @@ void Renderer::update() {
 
     //update uniforms
     RendererUniforms rendererUniforms {
+        m_scene->hasEnvironmentMap() ? uint32_t(1) : uint32_t(0),
+        m_scene->getEnvironmentMapOffset(),
         m_renderShadows ? uint32_t(1) : uint32_t(0),
         m_shadowMapSize,
         glm::pi<float>(),
         1.0f / glm::pi<float>(),
         0.001f,
-        0.0f, 0.0f, 0.0f
+        0.0f
     };
     m_descriptorSets[0].updateBuffer("Renderer", frameIndex, &rendererUniforms);
     auto sceneSize = m_scene->getSize();

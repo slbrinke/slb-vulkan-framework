@@ -52,6 +52,14 @@ glm::vec3 Scene::getBackgroundColor() {
     return m_backgroundColor;
 }
 
+bool Scene::hasEnvironmentMap() {
+    return m_hasEnvMap;
+}
+
+float Scene::getEnvironmentMapOffset() {
+    return m_envMapOffset;
+}
+
 std::vector<uint32_t> Scene::getSceneCounts() {
     std::vector<uint32_t> counts = {
         m_numMaterials, m_numLights, m_numTextures,
@@ -98,8 +106,9 @@ void Scene::addSceneNode(std::unique_ptr<SceneNode> &sceneNode) {
     m_rootNode->addChild(sceneNode);
 }
 
-void Scene::addEnvironmentMap(std::string fileName) {
+void Scene::addEnvironmentMap(std::string fileName, float phi) {
     m_envMapFile = fileName;
+    m_envMapOffset = phi / 360.0f;
     m_hasEnvMap = true;
 }
 

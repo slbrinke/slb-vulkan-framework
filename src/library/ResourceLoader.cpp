@@ -133,14 +133,14 @@ std::string ResourceLoader::getDescriptorText(std::string descriptorName, uint32
         + "}camera;\n\n";
     } else if(descriptorName == "Renderer") {
         return "layout(set = " + std::to_string(setIndex) + ", binding = 1) uniform RendererUniforms {\n"
+        + "   bool useEnvMap;\n"
+        + "   float envMapOffset;\n"
         + "   bool renderShadows;\n"
         + "   uint shadowMapSize;\n"
         + "   float pi;\n"
         + "   float inversePi;\n"
         + "   float epsilon;\n"
-        + "   float pad1;\n"
-        + "   float pad2;\n"
-        + "   float pad3;\n"
+        + "   float pad;\n"
         + "}renderer;\n\n";
     } else if(descriptorName == "Simulation") {
         return "layout(set = " + std::to_string(setIndex) + ", binding = 2) uniform SimulationUniforms {\n"

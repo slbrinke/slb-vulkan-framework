@@ -2,6 +2,8 @@
 
 This simple framework is set up to render small scenes in vulkan.
 
+![Example scene](resources/images/deferred_pbr_example_scene.jpg)
+
 The rendering library started out based on the vulkan tutorial by Alexander Overvoorde: https://vulkan-tutorial.com/
 and is successively extended to test out different rendering techniques.
 

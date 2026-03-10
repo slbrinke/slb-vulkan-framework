@@ -14,14 +14,14 @@
  * Uniform data providing constants used for different purposes in the shaders.
  */
 struct RendererUniforms {
+    uint32_t useEnvMap; /**< 1 (=true) if an environment map is added to the scene */
+    float envMapOffset; /**< Horizontal offset of the environment map */
     uint32_t renderShadows; /**< 1 (=true) if shadow mapping is enabled */
     uint32_t shadowMapSize; /**< Width and height of the shadow maps in number of pixels */
     float pi; /**< The mathematical constant pi */
     float inversePi; /**< One divided by pi */
     float epsilon; /**< Very small value */
-    float pad1;
-    float pad2;
-    float pad3;
+    float pad;
 };
 
 /**
@@ -127,7 +127,7 @@ protected:
     std::vector<RenderStep> m_renderSteps; /**< Individual rendering steps iterated for every frame */
     std::vector<ComputeStep> m_computeSteps; /**< Individual compute steps iterated for every frame */
 
-    bool m_renderShadows = false; /**< State parameter turning shadow mapping on and off */
+    bool m_renderShadows = true; /**< State parameter turning shadow mapping on and off */
     uint32_t m_shadowMapSize = 1024; /**< Size of all generated shadow maps in number of pixels */
 
     std::shared_ptr<Mesh> m_pointMesh = nullptr; /**< Dummy mesh with a single point used to instantiate shader storage data */
